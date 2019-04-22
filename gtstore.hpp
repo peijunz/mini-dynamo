@@ -16,6 +16,10 @@ using namespace std;
 
 typedef vector<string> val_t;
 
+#define CONFIG_N	3
+#define CONFIG_R	2
+#define CONFIG_W	2
+
 typedef enum {
 
 } message_type_t;
@@ -74,6 +78,8 @@ public:
 	NodeTable	node_table;
 
 	void init();
+
+	string read(string key);
 
 
 };
