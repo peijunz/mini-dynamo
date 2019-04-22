@@ -8,6 +8,8 @@
 #include <vector>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <map>
 #include <unordered_map>
@@ -15,10 +17,6 @@
 using namespace std;
 
 typedef vector<string> val_t;
-
-
-
-
 
 class GTStoreClient {
 private:
@@ -54,9 +52,12 @@ public:
 
 
 
+constexpr char* manager_addr="manager.socket";
+constexpr int listenQ = 20;
 
 class GTStoreManager {
 public:
+	int managerfd;
 	void init();
 };
 
