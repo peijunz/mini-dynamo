@@ -1,8 +1,25 @@
 #include "gtstore.hpp"
 
 void GTStoreManager::init() {
-	
-	cout << "Inside GTStoreManager::init()\n";
+	int size;
+	struct sockaddr_un un;
+	un.sun_family = AF_UNIX;
+	strcpy(un.sun_path, manager_addr);
+	if ((managerfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
+		perror("socket failed");
+		exit(1);
+	}
+	size = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
+	if (bind(managerfd, (struct sockaddr *)&un, size) < 0)
+	if ((managerfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
+		perror("bind failed");
+		exit(1);
+	}
+	if (listen(managerfd, listenQ) < 0){
+		perror("listen failed");
+		exit(1);
+	}
+	cout << "GTStoreManager::init() Done\n";
 }
 
 int main(int argc, char **argv) {

@@ -8,6 +8,8 @@
 #include <vector>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <map>
 #include <unordered_map>
@@ -27,7 +29,6 @@ typedef enum {
 struct Message {
 	message_type_t type;
 } ;
-
 
 
 class GTStoreClient {
@@ -64,9 +65,12 @@ public:
 
 
 
+constexpr char* manager_addr="manager.socket";
+constexpr int listenQ = 20;
 
 class GTStoreManager {
 public:
+	int managerfd;
 	void init();
 };
 
