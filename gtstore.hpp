@@ -9,9 +9,16 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+#include <map>
+#include <unordered_map>
+
 using namespace std;
 
 typedef vector<string> val_t;
+
+
+
+
 
 class GTStoreClient {
 private:
@@ -24,6 +31,30 @@ public:
 	bool put(string key, val_t value);
 };
 
+
+typedef string VirtualNodeID;
+typedef string StorageNodeID;
+
+class NodeTable {
+private:
+	static const hash<string>	consistent_hash;
+
+public:
+	map<size_t, VirtualNodeID>	virtual_nodes;
+	map<size_t, StorageNodeID> 	storage_nodes;
+	unordered_map<StorageNodeID, int>	socket_map;
+
+	NodeTable(){};
+	~NodeTable(){};
+
+	vector<pair<VirtualNodeID, StorageNodeID>> get_preference_list(string key, int size=1);
+
+};
+
+
+
+
+
 class GTStoreManager {
 public:
 	void init();
@@ -31,6 +62,10 @@ public:
 
 class GTStoreStorage {
 public:
+	StorageNodeID	id;
+	map<VirtualNodeID, unordered_map<string, string>>	data;
+	NodeTable	node_table;
+
 	void init();
 };
 
