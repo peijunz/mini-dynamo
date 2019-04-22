@@ -23,5 +23,12 @@ Because we potentially need to migrate virtual nodes among storage nodes, the da
 ## Request of Clients
 > There are two strategies that a client can use to select a node: (1) route its request through a generic load balancer that will select a node based on load information, or (2) use a partition-aware client library that routes requests directly to the appropriate coordinator nodes. 
 
+
+## Initial Implementation
++ Every message establish a new socket
++ Later improvement by event-driven model
+
+"13 clientid nodeid length\ngchsyhesgeyjrhnjyadbyuj"
+
 # References
 + Stevens, W. Richard, and Stephen A. Rago. Advanced programming in the UNIX environment. Addison-Wesley, 2008.

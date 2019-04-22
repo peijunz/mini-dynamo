@@ -8,6 +8,7 @@
 #include <vector>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -25,6 +26,7 @@ typedef enum {
 struct Message {
 	message_type_t type;
 } ;
+
 
 
 class GTStoreClient {
@@ -68,6 +70,7 @@ class GTStoreManager {
 public:
 	int managerfd;
 	void init();
+	void exec();
 };
 
 class GTStoreStorage {
