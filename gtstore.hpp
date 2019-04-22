@@ -16,7 +16,13 @@ using namespace std;
 
 typedef vector<string> val_t;
 
+typedef enum {
 
+} message_type_t;
+
+struct Message {
+	message_type_t type;
+} ;
 
 
 
@@ -64,9 +70,12 @@ class GTStoreStorage {
 public:
 	StorageNodeID	id;
 	map<VirtualNodeID, unordered_map<string, string>>	data;
+
 	NodeTable	node_table;
 
 	void init();
+
+
 };
 
 #endif
