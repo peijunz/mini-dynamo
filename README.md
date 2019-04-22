@@ -1,9 +1,21 @@
-# CS 4210/6210 Advanced Operating Systems
-## Project 4 - GTStore
-### Due: Tuesday April 23 11:59pm
-
+# Project 4 - GTStore
+## Due: Tuesday April 23 11:59pm
 In this project you will implement a distributed key-value store (GTStore) system. Nodes in this system should communicate with network calls. Please implement your program under the given skeleton codebase, do not add additional `.hpp` and `.cpp` files.
 
-- You're highly encouraged to work in pairs. 
-- Code implementation in C/C++. 
-- See the [project description](./CS4210_6210_proj4_description.pdf) for more details.
+## Global Shared information
+There are global shared info among manager and all storage nodes:
++ List of alive storage nodes
++ The virtual nodes to storage nodes address mapping
+
+Consider our network topology as a fully connected graph among storage nodes and manager.
+For every storage node and manager, it also stores a list of open socket to other storage nodes. 
+
+Because we potentially need to migrate virtual nodes among storage nodes, the data is stored in different sectors corresponding to different virtual nodes(token). In this way, getting new tokens or sending tokens is very easy.
+
+## Membership
++ When a storages nodes starts, it first contacts manager to get existing global information, and then send its existence to all other nodes. Then it may gather tokens from its neighbors.
++ When a node leaves, it also contacts manager and other neighbors to give its data. Then it must update its leaving info mation to all nodes. 
+
+## Load balancing
++ Client get recommended node from manager, which is given by round robin
++ Virtual nodes it self could guarantee keys are balanced among storage nodes
