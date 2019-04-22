@@ -24,8 +24,24 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 
 void GTStoreStorage::init() {
 	
+
+
+
+
+
 	cout << "Inside GTStoreStorage::init()\n";
 }
+
+
+string GTStoreStorage::read(string key) {
+	auto pref_list = node_table.get_preference_list(key);
+	string value;
+	int success = 0;
+	
+}
+
+
+
 
 int main(int argc, char **argv) {
 
