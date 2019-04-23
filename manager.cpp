@@ -26,8 +26,17 @@ int GTStoreManager::manage_client_request(Message &m, int fd){
 	printf("Manager connected to some client\n");
 
 	printf("Got request from client\n");
-	m.type |= ERROR_MASK;
-	m.node_id = -1;
+	if (!storage_nodes.size()){
+		m.type |= ERROR_MASK;
+		m.node_id = 0;
+	}
+	else{
+		auto it = storage_nodes.upper_bound(cur_contact);
+		if (it == storage_nodes.end())
+			it = storage_nodes.begin();
+		cur_contact = *it;
+		m.node_id = cur_contact;
+	}
 	m.length = 0;
 	m.send(fd);
 	printf("Sent contact for client\n");
@@ -48,12 +57,13 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	// send back virtual node ids
 	m.type = MSG_MANAGER_REPLY;
 	m.node_id = sid;
+	storage_nodes.insert(sid);
 	if (m.data) delete[] m.data;
-	m.length = (1 + num_vnodes) * 64;
+	m.length = (1 + num_vnodes) * 16;
 	m.data = new char[m.length];
 	sprintf(m.data, "%d", num_vnodes);
 	for (int i=0; i<num_vnodes; i++) {
-		sprintf(m.data + 64*(i+1), "%d", vvid[i]);
+		sprintf(m.data + 16*(i+1), "%d", vvid[i]);
 	}
 
 	// broadcast to all nodes

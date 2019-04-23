@@ -32,7 +32,7 @@ void GTStoreStorage::init(int num_vnodes) {
 	sscanf(m.data, "%d", &num_vnodes);
 	vector<VirtualNodeID> vvid(num_vnodes);
 	for (int i=0; i<num_vnodes; i++) {
-		sscanf(m.data + 64*(i+1), "%d", &vvid[i]);
+		sscanf(m.data + 16*(i+1), "%d", &vvid[i]);
 	}
 	node_table.add_storage_node(num_vnodes, id, vvid);
 
@@ -211,7 +211,7 @@ bool GTStoreStorage::process_manager_reply(Message& m, int fd) {
 	sscanf(m.data, "%d", &num_vnodes);
 	vector<VirtualNodeID> vvid(num_vnodes);
 	for (int i=0; i<num_vnodes; i++) {
-		sscanf(m.data + 64*(i+1), "%d", &vvid[i]);
+		sscanf(m.data + 16*(i+1), "%d", &vvid[i]);
 	}
 	node_table.add_storage_node(num_vnodes, id, vvid);
 

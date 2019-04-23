@@ -13,6 +13,7 @@
 #include <sys/un.h>
 
 #include <map>
+#include <set>
 #include <unordered_map>
 
 using namespace std;
@@ -91,11 +92,10 @@ struct Message {
 
 
 class GTStoreClient {
-private:
+public:
 	int client_id;
 	int node_id; // Major contact node for this client
 	val_t value;
-public:
 	void init(int id);
 	void finalize();
 	val_t get(string key);
@@ -115,7 +115,6 @@ public:
 	map<size_t, VirtualNodeID>	virtual_nodes;
 	map<VirtualNodeID, StorageNodeID> 	storage_nodes;
 	
-	unordered_map<StorageNodeID, int>	socket_map;
 
 	NodeTable(){};
 	~NodeTable(){};
@@ -142,7 +141,8 @@ public:
 	NodeTable node_table;
 	void init();
 	void exec();
-
+	int cur_contact=-1;
+	set<StorageNodeID>	storage_nodes;
 	int manage_client_request(Message& m, int fd);
 	int manage_node_request(Message& m, int fd);
 };
