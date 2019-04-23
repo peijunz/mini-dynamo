@@ -42,12 +42,29 @@ typedef enum {
 } message_type_t;
 
 struct Message {
-	message_type_t type;
+	int type;
 	char client_id[MAX_ID_LENGTH];
 	char node_id[MAX_ID_LENGTH];
 	size_t length;
 	char *data;
 
+	ssize_t rio_writen(int fd, char* buf, size_t n) {
+		size_t rem = n;
+		ssize_t nwrite = 0;
+		while(rem > 0) {
+			if((nwrite = write(fd, buf, rem)) <= 0) { //EINTER
+				if(errno == EINTR)
+					nwrite = 0;
+				else {
+					perror("write");
+					return -1;
+				}
+			}
+			rem -= (size_t)nwrite;
+			buf += nwrite;
+		}
+		return (ssize_t)n;
+	}
 	ssize_t rio_readn(int fd, char* buf, size_t n) {
 		size_t rem = n;
 		ssize_t nread;
@@ -86,6 +103,15 @@ struct Message {
 			}
 		}
 		return (ssize_t)(n - rem);
+	}
+	Message(int t, char*cid, char*nid, int l):type(t), length(l){
+		strcpy(client_id, cid);
+		strcpy(node_id, nid);
+		data = new char[length+1];
+		data[length] = 0;
+	}
+	int send_to(char* addr){
+		return 0;
 	}
 	Message(int fd){
 		int offset = 0;
