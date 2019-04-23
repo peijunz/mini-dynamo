@@ -5,13 +5,26 @@
 vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
 	size_t hash_key = consistent_hash(key);
 	auto it = virtual_nodes.upper_bound(hash_key);
+	unordered_map<StorageNodeID, VirtualNodeID>	pref_map;
 	vector<pair<VirtualNodeID, StorageNodeID>>	pref_list;
-	for (int i=0; i<size; i++) {
-		if (it == virtual_nodes.end())
+	int cycle=0;
+	while (pref_map.size()<size) {
+		if (it == virtual_nodes.end()){
+			if (cycle ==1){
+				// Infinite loop
+				break;
+			}
 			it = virtual_nodes.begin();
+			cycle += 1;
+		}
+		if (pref_map.count(storage_nodes[it->first]) == 0)
+			pref_map[storage_nodes[it->first]] = it->second;
+		it++;
+	}
+	for (auto const& x :pref_map) {
 		pref_list.push_back({
-			it->second, 				// virtual node id
-			storage_nodes[it->first]	// storage node id
+			x.second, 				// virtual node id
+			x.first	// storage node id
 		});
 	}
 	return pref_list;
@@ -135,5 +148,6 @@ int main(int argc, char **argv) {
 
 	GTStoreStorage storage;
 	storage.init();
+	storage.exec();
 	
 }
