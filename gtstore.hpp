@@ -157,7 +157,7 @@ public:
 
 	// tasks
 	unordered_map<ClientID, int>	forward_tasks;	// task --> socket
-	unordered_map<ClientID, Data>	working_tasks;	// task --> received results
+	unordered_map<ClientID, pair<int, Data>>	working_tasks;	// task --> received results
 
 	void init(int num_vnodes=CONFIG_N);
 
