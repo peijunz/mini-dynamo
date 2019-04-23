@@ -106,15 +106,21 @@ class NodeTable {
 private:
 
 public:
-	hash<string>	consistent_hash;
-	// hash<string>(s)
+	hash<string>	consistent_hash;			// hash<string>(s)
+
+	// node map
+	int num_virtual_nodes = 0;
+	int num_storage_nodes = 0;
 	map<size_t, VirtualNodeID>	virtual_nodes;
-	map<size_t, StorageNodeID> 	storage_nodes;
+	map<VirtualNodeID, StorageNodeID> 	storage_nodes;
+	
 	unordered_map<StorageNodeID, int>	socket_map;
 
 	NodeTable(){};
 	~NodeTable(){};
 
+	void add_virtual_node(VirtualNodeID vid = -1);
+	void add_storage_node(int num_vnodes, StorageNodeID sid = -1, vector<VirtualNodeID> vvid={});
 	vector<pair<VirtualNodeID, StorageNodeID>> get_preference_list(string key, int size=1);
 
 };

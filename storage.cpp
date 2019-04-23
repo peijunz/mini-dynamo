@@ -1,6 +1,25 @@
 #include "gtstore.hpp"
 
 
+void NodeTable::add_virtual_node(VirtualNodeID vid) {
+	if (vid == -1)
+		vid = num_virtual_nodes ++;
+	size_t hash_key = consistent_hash("virtual_node_" + to_string(vid));
+	virtual_nodes.insert({hash_key, vid});
+}
+
+void NodeTable::add_storage_node(int num_vnodes, StorageNodeID sid, vector<VirtualNodeID> vvid) {
+	if (sid == -1) {
+		sid = num_storage_nodes ++;
+		vvid.clear();
+		for (int i=0; i<num_vnodes; i++)
+			vvid.push_back(num_virtual_nodes ++);
+	}
+	for (VirtualNodeID vid : vvid) {
+		add_virtual_node(vid);
+		storage_nodes.insert({vid, sid});
+	}
+}
 
 vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
 	size_t hash_key = consistent_hash(key);
@@ -17,8 +36,8 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 			it = virtual_nodes.begin();
 			cycle += 1;
 		}
-		if (pref_map.count(storage_nodes[it->first]) == 0)
-			pref_map[storage_nodes[it->first]] = it->second;
+		if (pref_map.count(storage_nodes[it->second]) == 0)
+			pref_map[storage_nodes[it->second]] = it->second;
 		it++;
 	}
 	for (auto const& x :pref_map) {

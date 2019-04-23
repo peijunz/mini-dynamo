@@ -2,11 +2,7 @@
 
 // Utility functions
 
-<<<<<<< HEAD
-int open_fd(const char *addr){
-=======
 int openfd(const char *addr){
->>>>>>> eaa28e1c6e559f47dd23db97059e7c2404d7c4b9
 	int fd;
 	struct sockaddr_un sun;
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {

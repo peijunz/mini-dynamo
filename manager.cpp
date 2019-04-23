@@ -38,10 +38,10 @@ int manage_node_request(Message &m, int fd){
 	// Manage entrance and exit status of nodes
 	printf("Manager connected to some node\n");
 
+	printf("")
 
 
 
-	
 	return 0;
 }
 
