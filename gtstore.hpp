@@ -170,6 +170,7 @@ public:
 
 
 constexpr char* manager_addr="manager.socket";
+const string node_addr = "node.socket";
 constexpr int listenQ = 20;
 
 class GTStoreManager {
@@ -183,6 +184,7 @@ class GTStoreStorage {
 public:
 	StorageNodeID	id;
 	NodeTable	node_table;
+	int nodefd;
 
 	class Data {
 	public:
@@ -210,6 +212,12 @@ public:
 	bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
 	bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
 
+
+	void exec();
+
+	bool process_client_request(Message& msg);
+	bool process_node_request(Message& msg);
+	bool process_coordinator_request(Message& msg);
 };
 
 #endif

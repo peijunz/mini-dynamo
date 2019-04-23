@@ -24,11 +24,25 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 
 void GTStoreStorage::init() {
 	
-
-
-
-
-
+	int size;
+	struct sockaddr_un un;
+	un.sun_family = AF_UNIX;
+	string storage_node_addr = node_addr + "_" + id;
+	strcpy(un.sun_path, storage_node_addr.data());
+	if ((nodefd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
+		perror("socket failed");
+		exit(1);
+	}
+	size = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
+	if (bind(nodefd, (struct sockaddr *)&un, size) < 0)
+	if ((nodefd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
+		perror("bind failed");
+		exit(1);
+	}
+	if (listen(nodefd, listenQ) < 0){
+		perror("listen failed");
+		exit(1);
+	}
 	cout << "Inside GTStoreStorage::init()\n";
 }
 
@@ -67,6 +81,36 @@ bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualN
 
 }
 
+void GTStoreStorage::exec() {
+
+	int connfd;
+	while (1){
+		connfd = accept(nodefd, NULL, NULL);
+    	if (connfd == -1) {
+        	perror("Accept fail");
+		}
+		Message m(connfd);
+		printf("Manager connected to some client\n");
+		if (m.type | CLIENT_MASK) {
+
+		} else if (m.type | NODE_MASK) {
+
+		} else if (m.type | COOR_MASK) {
+			
+		}
+		close(connfd);
+	}
+}
+
+bool GTStoreStorage::process_client_request(Message& msg) {
+
+}
+bool GTStoreStorage::process_node_request(Message& msg) {
+
+}
+bool GTStoreStorage::process_coordinator_request(Message& msg) {
+
+}
 
 int main(int argc, char **argv) {
 
