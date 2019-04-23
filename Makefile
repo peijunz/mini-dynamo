@@ -1,24 +1,27 @@
-CFLAGS  =
+CPPFLAGS = -Wall
 LFLAGS  =
 CC      = g++
 RM      = /bin/rm -rf
 
 TESTS = test_app manager storage test_socket
-SRC = test_app.cpp client.cpp
+OBJS =  client.o
 
 all: $(TESTS)
 
-manager: manager.cpp
-	$(CC) -Wall manager.cpp -o manager
+client.o:
+	$(CC) $(CFLAGS) -c client.cpp -o client.o
 
-storage: storage.cpp
-	$(CC) -Wall storage.cpp -o storage
+manager:
+	$(CC) $(CFLAGS) client.o manager.cpp -o manager
 
-test_app : 
-	$(CC) -Wall $(SRC) -o test_app
+storage: $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) storage.cpp -o storage
+
+test_app: $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) test_app.cpp -o test_app
 
 clean:
 	$(RM) *.o $(TESTS)
 
-test_socket:
-	$(CC) test_socket.cpp -o test_socket
+test_socket: $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) test_socket.cpp -o test_socket

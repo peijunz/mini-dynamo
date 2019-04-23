@@ -1,5 +1,6 @@
 #include "gtstore.hpp"
 
+
 void GTStoreManager::init() {
 	int size;
 	struct sockaddr_un un;
@@ -28,7 +29,8 @@ void GTStoreManager::exec(){
     	if (connfd == -1) {
         	perror("Accept fail");
 		}
-		Message m(connfd);
+		Message m;
+		m.recv(connfd);
 		printf("Manager connected to some client\n");
 		m.print();
 		close(connfd);
