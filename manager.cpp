@@ -22,6 +22,19 @@ void GTStoreManager::init() {
 	cout << "GTStoreManager::init() Done\n";
 }
 
+void GTStoreManager::exec(){
+	int connfd;
+	while (1){
+		connfd = accept(managerfd, NULL, NULL);
+    	if (connfd == -1) {
+        	perror("Accept fail");
+		}
+		Message m(connfd);
+		printf("Manager connected to some client\n");
+		close(connfd);
+	}
+}
+
 int main(int argc, char **argv) {
 
 	GTStoreManager manager;

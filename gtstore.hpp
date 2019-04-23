@@ -8,6 +8,7 @@
 #include <vector>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -46,7 +47,65 @@ struct Message {
 	char node_id[MAX_ID_LENGTH];
 	size_t length;
 	char *data;
+
+	ssize_t rio_readn(int fd, char* buf, size_t n) {
+		size_t rem = n;
+		ssize_t nread;
+		while(rem > 0) {
+			if((nread = read(fd, buf, rem)) < 0) {
+				if(errno == EINTR)
+					nread = 0;
+				else
+					return -1;
+			} else if(nread == 0)
+				break;
+			rem -= (size_t)nread;
+			buf += nread;
+		}
+		return (ssize_t)(n - rem);
+	}
+
+	int read_line(int fd, char* buf, size_t n, int *loc) {
+		size_t rem = n;
+		ssize_t nread;
+		while(rem > 0) {
+			if((nread = read(fd, buf, rem)) < 0) {
+				if(errno == EINTR)
+					nread = 0;
+				else
+					return -1;
+			} else if(nread == 0)
+				break;
+			rem -= (size_t)nread;
+			buf += nread;
+			for (char *p=buf-nread; p < buf; p++){
+				if (*p=='\n'){
+					*loc = n-rem-(buf-p)+1;
+					return (ssize_t)(n - rem);
+				}
+			}
+		}
+		return (ssize_t)(n - rem);
+	}
+	Message(int fd){
+		int offset = 0;
+		char buf[256];
+		int n;
+		if ((n = read_line(fd, buf, sizeof(buf), &offset)) < 0){
+			fprintf(stderr, "Failed in reading message\n");
+			exit(-1);
+		}
+		sscanf(buf, "%d %s %s %d\n", &type, client_id, node_id, &length);
+		data = new char[length+1];
+		data[length] = 0;
+		strncpy(data, buf+offset, n-offset);
+		rio_readn(fd, data+n-offset, length-(n-offset));
+	}
+	~Message(){
+		delete[] data;
+	}
 } ;
+
 
 
 class GTStoreClient {
@@ -91,6 +150,7 @@ class GTStoreManager {
 public:
 	int managerfd;
 	void init();
+	void exec();
 };
 
 class GTStoreStorage {
