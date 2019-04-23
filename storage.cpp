@@ -78,7 +78,7 @@ StorageNodeID GTStoreStorage::find_coordinator(string key) {
 
 
 bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualNodeID) {
-
+	return false;
 }
 
 void GTStoreStorage::exec() {
@@ -104,12 +104,13 @@ void GTStoreStorage::exec() {
 
 bool GTStoreStorage::process_client_request(Message& msg) {
 
+	return false;
 }
 bool GTStoreStorage::process_node_request(Message& msg) {
-
+	return false;
 }
 bool GTStoreStorage::process_coordinator_request(Message& msg) {
-
+	return false;
 }
 
 int main(int argc, char **argv) {

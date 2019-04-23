@@ -3,7 +3,7 @@ LFLAGS  =
 CC      = g++
 RM      = /bin/rm -rf
 
-TESTS = test_app manager storage
+TESTS = test_app manager storage test_socket
 SRC = test_app.cpp client.cpp
 
 all: $(TESTS)
@@ -19,3 +19,6 @@ test_app :
 
 clean:
 	$(RM) *.o $(TESTS)
+
+test_socket:
+	$(CC) test_socket.cpp -o test_socket

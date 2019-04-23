@@ -30,6 +30,7 @@ void GTStoreManager::exec(){
 		}
 		Message m(connfd);
 		printf("Manager connected to some client\n");
+		m.print();
 		close(connfd);
 	}
 }
@@ -38,5 +39,5 @@ int main(int argc, char **argv) {
 
 	GTStoreManager manager;
 	manager.init();
-	
+	manager.exec();
 }

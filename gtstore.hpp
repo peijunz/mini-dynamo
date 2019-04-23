@@ -48,7 +48,7 @@ struct Message {
 	size_t length;
 	char *data=NULL;
 
-	ssize_t rio_writen(int fd, char* buf, size_t n) {
+	ssize_t rio_writen(int fd, const char* buf, size_t n) {
 		size_t rem = n;
 		ssize_t nwrite = 0;
 		while(rem > 0) {
@@ -104,11 +104,11 @@ struct Message {
 		}
 		return (ssize_t)(n - rem);
 	}
-	Message(int t, char*cid, char*nid, int l):type(t), length(l){
+	Message(int t, const char *cid, const char *nid, int l):type(t), length(l){
 		strcpy(client_id, cid);
 		strcpy(node_id, nid);
 	}
-	int send_to(char* addr, char*content){
+	int send_to(const char *addr, const char *content){
 		char header[256];
 		struct sockaddr_un sun;
 		int fd=0;
@@ -121,7 +121,7 @@ struct Message {
 		if (connect(fd, (struct sockaddr *)&sun, len) < 0) {
 			return -1;
 		}
-		sprintf(header, "%d %s %s %d\n", type, client_id, node_id, length);
+		sprintf(header, "%d %s %s %ld\n", type, client_id, node_id, length);
 		rio_writen(fd, header, strlen(header));
 		rio_writen(fd, content, length);
 		return 0;
@@ -134,7 +134,7 @@ struct Message {
 			fprintf(stderr, "Failed in reading message\n");
 			exit(-1);
 		}
-		sscanf(buf, "%d %s %s %d\n", &type, client_id, node_id, &length);
+		sscanf(buf, "%d %s %s %ld\n", &type, client_id, node_id, &length);
 		data = new char[length+1];
 		data[length] = 0;
 		strncpy(data, buf+offset, n-offset);
@@ -144,6 +144,12 @@ struct Message {
 		if (data!=NULL)
 			delete[] data;
 	}
+	void print(){
+		printf("%d %s %s %ld\n", type, client_id, node_id, length);
+		if (data){
+			printf("%.*s\n\n", (int)length, data);
+		}
+	};
 } ;
 
 
@@ -166,9 +172,10 @@ typedef string ClientID;
 
 class NodeTable {
 private:
-	static const hash<string>	consistent_hash;
 
 public:
+	hash<string>	consistent_hash;
+	// hash<string>(s)
 	map<size_t, VirtualNodeID>	virtual_nodes;
 	map<size_t, StorageNodeID> 	storage_nodes;
 	unordered_map<StorageNodeID, int>	socket_map;
@@ -183,8 +190,8 @@ public:
 
 
 
-constexpr char* manager_addr="manager.socket";
 const string node_addr = "node.socket";
+constexpr char manager_addr[]="manager.socket";
 constexpr int listenQ = 20;
 
 class GTStoreManager {
