@@ -191,9 +191,20 @@ bool GTStoreStorage::process_node_request(Message& m, int fd) {
 	return false;
 }
 
-bool GTStoreStorage::process_node_reply(Message& m, int fd) {
+
+bool GTStoreStorage::process_node_reply(Message& msg, int fd) {
+	// string key;
+	// Data data;
+	// msg.get_key_data(key, data);
+	assert(("no client socket stored", forward_tasks.count(msg.client_id)!=0));
+	int clientfd = forward_tasks[msg.client_id];
+	msg.type = MSG_CLIENT_REPLY;
+	msg.send(clientfd, msg.data);
+	close(clientfd);
+	forward_tasks.erase(msg.client_id);
 	return false;
 }
+
 bool GTStoreStorage::process_coordinator_request(Message& m, int fd) {
 	// Do as coordinator asked to do
 
