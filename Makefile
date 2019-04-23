@@ -12,7 +12,7 @@ client.o:
 	$(CC) $(CFLAGS) -c client.cpp -o client.o
 
 manager:
-	$(CC) $(CFLAGS) client.o manager.cpp -o manager
+	$(CC) $(CFLAGS) $(OBJS) manager.cpp -o manager
 
 storage: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) storage.cpp -o storage
@@ -24,4 +24,4 @@ clean:
 	$(RM) *.o $(TESTS)
 
 test_socket: $(OBJS)
-$(CC) $(CFLAGS) $(OBJS) test_socket.cpp -o test_socket
+	$(CC) $(CFLAGS) $(OBJS) test_socket.cpp -o test_socket

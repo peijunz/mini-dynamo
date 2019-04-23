@@ -120,7 +120,7 @@ public:
 	~NodeTable(){};
 
 	void add_virtual_node(VirtualNodeID vid = -1);
-	void add_storage_node(int num_vnodes, StorageNodeID sid = -1, vector<VirtualNodeID> vvid={});
+	void add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid);
 	vector<pair<VirtualNodeID, StorageNodeID>> get_preference_list(string key, int size=1);
 
 };
@@ -135,8 +135,12 @@ constexpr int listenQ = 20;
 class GTStoreManager {
 public:
 	int managerfd;
+	NodeTable node_table;
 	void init();
 	void exec();
+
+	int manage_client_request(Message& m, int fd);
+	int manage_node_request(Message& m, int fd);
 };
 
 class GTStoreStorage {
@@ -148,7 +152,7 @@ public:
 	map<VirtualNodeID, unordered_map<string, Data>>	data;
 
 
-	void init();
+	void init(int num_vnodes=3);
 
 	// data functions
 	bool read_local(string key, Data& data, VirtualNodeID);

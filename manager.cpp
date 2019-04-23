@@ -22,7 +22,7 @@ void GTStoreManager::init() {
 	cout << "GTStoreManager::init() Done\n";
 }
 
-int manage_client_request(Message &m, int fd){
+int GTStoreManager::manage_client_request(Message &m, int fd){
 	printf("Manager connected to some client\n");
 
 	printf("Got request from client\n");
@@ -34,13 +34,29 @@ int manage_client_request(Message &m, int fd){
 	return 0;
 }
 
-int manage_node_request(Message &m, int fd){
+int GTStoreManager::manage_node_request(Message &m, int fd){
 	// Manage entrance and exit status of nodes
 	printf("Manager connected to some node\n");
 
-	printf("")
+	printf("");
+	int num_vnodes;
+	sscanf(m.data, "%d", &num_vnodes);
+	int sid = -1;
+	vector<VirtualNodeID> vvid = {};
+	node_table.add_storage_node(num_vnodes, sid, vvid);
 
-
+	// send back virtual node ids
+	m.type = MSG_NODE_REPLY;
+	m.node_id = sid;
+	if (m.data) delete[] m.data;
+	m.length = num_vnodes * 64;
+	m.data = new char[m.length];
+	for (int i=0; i<num_vnodes; i++) {
+		sprintf(m.data + 64*i, "%d", vvid[i]);
+	}
+	m.send(fd, m.data);
+	if (m.data) delete[] m.data;
+	printf ("Add a new node\n");
 
 	return 0;
 }

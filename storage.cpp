@@ -1,60 +1,7 @@
 #include "gtstore.hpp"
 
 
-void NodeTable::add_virtual_node(VirtualNodeID vid) {
-	if (vid == -1)
-		vid = num_virtual_nodes ++;
-	size_t hash_key = consistent_hash("virtual_node_" + to_string(vid));
-	virtual_nodes.insert({hash_key, vid});
-}
-
-void NodeTable::add_storage_node(int num_vnodes, StorageNodeID sid, vector<VirtualNodeID> vvid) {
-	if (sid == -1) {
-		sid = num_storage_nodes ++;
-		vvid.clear();
-		for (int i=0; i<num_vnodes; i++)
-			vvid.push_back(num_virtual_nodes ++);
-	}
-	for (VirtualNodeID vid : vvid) {
-		add_virtual_node(vid);
-		storage_nodes.insert({vid, sid});
-	}
-}
-
-vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
-	size_t hash_key = consistent_hash(key);
-	auto it = virtual_nodes.upper_bound(hash_key);
-	unordered_map<StorageNodeID, VirtualNodeID>	pref_map;
-	vector<pair<VirtualNodeID, StorageNodeID>>	pref_list;
-	int cycle=0;
-	while (pref_map.size()<size) {
-		if (it == virtual_nodes.end()){
-			if (cycle ==1){
-				// Infinite loop
-				break;
-			}
-			it = virtual_nodes.begin();
-			cycle += 1;
-		}
-		if (pref_map.count(storage_nodes[it->second]) == 0)
-			pref_map[storage_nodes[it->second]] = it->second;
-		it++;
-	}
-	for (auto const& x :pref_map) {
-		pref_list.push_back({
-			x.second, 				// virtual node id
-			x.first	// storage node id
-		});
-	}
-	return pref_list;
-}
-
-
-
-
-
-
-void GTStoreStorage::init() {
+void GTStoreStorage::init(int num_vnodes) {
 	// TODO: Contact Manager to get global data
 	int size;
 	struct sockaddr_un un;
@@ -83,11 +30,27 @@ void GTStoreStorage::init() {
         printf("error in nodefd\n");
         exit(-1);
     }
-    Message msg(MSG_NODE_REQUEST, -1, -1, 0);
-    msg.send(fd);
-    msg.recv(fd);
+    Message m(MSG_NODE_REQUEST, -1, -1, 0);
+	m.length = 64;
+	m.data = new char[m.length];
+	sprintf(m.data, "%d", num_vnodes);
+    m.send(fd);
+    m.recv(fd);
+
+	if (m.type != MSG_NODE_REPLY) {
+		perror ("manager returns with unmatched message type!\n");
+		exit(-1);
+	}
+	id = m.node_id;
+	vector<VirtualNodeID> vvid(num_vnodes);
+	for (int i=0; i<num_vnodes; i++) {
+		sscanf(m.data + 64*i, "%d", &vvid[i]);
+	}
+	node_table.add_storage_node(num_vnodes, id, vvid);
+	printf ("Successfully add to manager!\n");
+
 	close(fd);
-	if (msg.type & ERROR_MASK){
+	if (m.type & ERROR_MASK){
 		printf("No available node\n");
 		//exit(1);
 	}
@@ -152,11 +115,11 @@ void GTStoreStorage::exec() {
 	}
 }
 
-bool GTStoreStorage::process_client_request(Message& msg, int fd) {
+bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	// Find coordinator and forward request
-	int offset = strnlen(msg.data, msg.length)+1;
-	char *val = msg.data + offset;
-	StorageNodeID sid = find_coordinator(msg.data);
+	int offset = strnlen(m.data, m.length)+1;
+	char *val = m.data + offset;
+	StorageNodeID sid = find_coordinator(m.data);
 	if (sid == id){
 		// Do not forward
 	}
@@ -165,11 +128,11 @@ bool GTStoreStorage::process_client_request(Message& msg, int fd) {
 	}
 	return false;
 }
-bool GTStoreStorage::process_node_request(Message& msg, int fd) {
+bool GTStoreStorage::process_node_request(Message& m, int fd) {
 	// collect R/W from pref list
 	return false;
 }
-bool GTStoreStorage::process_coordinator_request(Message& msg, int fd) {
+bool GTStoreStorage::process_coordinator_request(Message& m, int fd) {
 	// Do as coordinator asked to do
 	return false;
 }
