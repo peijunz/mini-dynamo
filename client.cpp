@@ -133,12 +133,15 @@ void Message::print(){
 int Message::set_key_data(string key, Data data) {
 	if (key.size() > MAX_KEY_LENGTH)
 		return -1;
+	length = MAX_KEY_LENGTH+1 + 64 + data.get_length();
+	if (this->data) delete[] this->data;
+	this->data = new char[length];
 	snprintf(this->data, MAX_KEY_LENGTH+1, "%s", key.data());
 	sprintf(this->data + MAX_KEY_LENGTH+1, "%lld %s\n", data.version, data.value.data());
 	return 0;
 }
 int Message::get_key_data(string& key, Data& data) {
-	sscanf(this->data, "%s", key.data());
+	sscanf(this->data, "%.*s", MAX_KEY_LENGTH+1, key.data());
 	sscanf(this->data + MAX_KEY_LENGTH+1, "%lld %s\n", &data.version, &data.value);
 	return 0;
 }
@@ -173,6 +176,15 @@ void NodeTable::add_storage_node(int num_vnodes, StorageNodeID& sid, vector<Virt
 		add_virtual_node(vid);
 		storage_nodes.insert({vid, sid});
 	}
+}
+
+
+VirtualNodeID NodeTable::find_virtual_node(string key) {
+	size_t hash_key = consistent_hash(key);
+	auto it = virtual_nodes.upper_bound(hash_key);
+	if (it == virtual_nodes.end())
+		it = virtual_nodes.begin();
+	return it->second;
 }
 
 vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
@@ -271,7 +283,7 @@ val_t GTStoreClient::get(string key) {
 	return value;
 }
 
-bool GTStoreClient::put(string key, val_t value) {
+bool GTStoreClient::put(string key, string value) {
 	// Attempt to find its contact
 	// If failed, then ask manager for a new contact
 

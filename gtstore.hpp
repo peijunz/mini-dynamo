@@ -26,15 +26,6 @@ typedef vector<string> val_t;
 #define MAX_ID_LENGTH	32
 #define MAX_KEY_LENGTH	20
 
-#define ERROR_MASK 1<<8
-#define CLIENT_MASK 1<<0
-#define NODE_MASK 1<<1
-#define COOR_MASK 1<<2
-#define MANAGER_MASK 1<<3
-#define WRITE_MASK 1<<4
-#define REPLY_MASK 1<<5
-
-
 class Data {
 public:
 	uint64_t version = 0;
@@ -49,6 +40,19 @@ public:
 	}
 };
 
+#define ERROR_MASK 1<<8
+#define CLIENT_MASK 1<<0
+#define NODE_MASK 1<<1
+#define COOR_MASK 1<<2
+#define MANAGER_MASK 1<<3
+#define WRITE_MASK 1<<4
+#define REPLY_MASK 1<<5
+
+
+
+typedef int VirtualNodeID;
+typedef int StorageNodeID;
+typedef int ClientID;
 
 
 typedef enum {
@@ -67,8 +71,8 @@ int read_line(int fd, char* buf, size_t n, int *loc);
 
 struct Message {
 	int type;
-	int client_id;
-	int node_id;
+	ClientID client_id;
+	StorageNodeID node_id;
 	size_t length;
 	char *data=NULL;
 	int set(int t, int cid, int nid, int l);
@@ -94,13 +98,9 @@ public:
 	void init(int id);
 	void finalize();
 	val_t get(string key);
-	bool put(string key, val_t value);
+	bool put(string key, string value);
 };
 
-
-typedef int VirtualNodeID;
-typedef int StorageNodeID;
-typedef int ClientID;
 
 class NodeTable {
 private:
@@ -121,6 +121,9 @@ public:
 
 	void add_virtual_node(VirtualNodeID vid = -1);
 	void add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid);
+
+	VirtualNodeID find_virtual_node(string key);
+
 	vector<pair<VirtualNodeID, StorageNodeID>> get_preference_list(string key, int size=1);
 
 };
@@ -145,18 +148,21 @@ public:
 
 class GTStoreStorage {
 public:
-	StorageNodeID	id;
+	StorageNodeID	id=-1;
 	NodeTable	node_table;
 	int nodefd;
 
 	map<VirtualNodeID, unordered_map<string, Data>>	data;
 
+	// tasks
+	unordered_map<ClientID, int>	current_task;
 
-	void init(int num_vnodes=3);
+
+	void init(int num_vnodes=CONFIG_N);
 
 	// data functions
-	bool read_local(string key, Data& data, VirtualNodeID);
-	bool write_local(string key, Data data, VirtualNodeID);
+	bool read_local(string key, Data& data);
+	bool write_local(string key, Data data);
 
 	// node functions
 	StorageNodeID find_coordinator(string key);
@@ -171,7 +177,9 @@ public:
 
 	bool process_client_request(Message& msg, int fd);
 	bool process_node_request(Message& msg, int fd);
+	bool process_node_reply(Message& msg, int fd);
 	bool process_coordinator_request(Message& msg, int fd);
+	bool process_coordinator_reply(Message& msg, int fd);
 };
 
 #endif
