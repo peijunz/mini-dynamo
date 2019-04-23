@@ -156,17 +156,33 @@ public:
 class GTStoreStorage {
 public:
 	StorageNodeID	id;
-	map<VirtualNodeID, unordered_map<string, string>>	data;
-
 	NodeTable	node_table;
 
+	class Data {
+	public:
+		uint64_t version;
+		string	 value;
+		bool operator=(Data& d) {
+			version = d.version;
+			value = d.value;
+		}
+	};
+	map<VirtualNodeID, unordered_map<string, Data>>	data;
 
 
 	void init();
 
-	string read(string key);
-	bool read_local(string key, string& value, VirtualNodeID);
-	bool read_remote(string key, string& value, VirtualNodeID, StorageNodeID)
+	// storage node functions
+	bool read_local(string key, Data& data, VirtualNodeID);
+	bool write_local(string key, Data data, VirtualNodeID);
+
+	// node functions
+	StorageNodeID find_coordinator(string key);
+	
+
+	// coordinator functions
+	bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
+	bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
 
 };
 
