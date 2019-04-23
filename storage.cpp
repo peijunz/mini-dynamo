@@ -59,9 +59,9 @@ void GTStoreStorage::init() {
 
 	// add to manager, get node id
 
-    int fd = open_clientfd(manager_addr);
+    int fd = open_fd(manager_addr);
     if (fd < 0){
-        printf("error in clientfd\n");
+        printf("error in nodefd\n");
         exit(-1);
     }
     Message msg(MSG_NODE_REQUEST, -1, -1, 0);
@@ -148,6 +148,6 @@ int main(int argc, char **argv) {
 
 	GTStoreStorage storage;
 	storage.init();
-	storage.exec();
+	//storage.exec();
 	
 }

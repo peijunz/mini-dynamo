@@ -6,7 +6,5 @@ int main() {
     client.init(4);
     client.get("key_0");
     */
-    GTStoreStorage storage;
-    storage.init();
     return 0;
 }

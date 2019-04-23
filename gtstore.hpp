@@ -60,7 +60,7 @@ typedef enum {
 	MSG_COORDINATOR_REPLY = COOR_MASK | REPLY_MASK,
 } message_type_t;
 
-int open_clientfd(const char *addr);
+int open_fd(const char *addr);
 ssize_t rio_writen(int fd, const char* buf, size_t n);
 ssize_t rio_readn(int fd, char* buf, size_t n);
 int read_line(int fd, char* buf, size_t n, int *loc);
