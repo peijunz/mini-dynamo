@@ -168,7 +168,7 @@ bool GTStoreStorage::process_node_request(Message& m, int fd) {
 	auto pref_list = node_table.get_preference_list(key, CONFIG_N);
 
 	// initialize task
-	working_tasks[m.client_id] = 0;
+	working_tasks.insert({m.client_id, {0, Data()}});
 
 	// itself
 	pref_list.erase(pref_list.begin());
@@ -179,7 +179,8 @@ bool GTStoreStorage::process_node_request(Message& m, int fd) {
 		// read
 		read_local(key, data);
 	}
-	working_tasks[m.client_id] += 1;
+	working_tasks[m.client_id].first ++;
+	working_tasks[m.client_id].second = data;
 
 	// ask other nodes to complete their work
 	for (auto& pref : pref_list) {
@@ -224,12 +225,24 @@ bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
 		return false;
 	}
 
-	working_tasks[m.client_id] ++;
-	if (working_tasks[m.client_id] >= 
+	string key; 
+	Data data;
+	m.get_key_data(key, data);
+	working_tasks[m.client_id].first ++;
+
+	if ((m.type | WRITE_MASK) ||
+		data.version >= working_tasks[m.client_id].second.version)
+	{
+		// new version, update result
+		working_tasks[m.client_id].second = data;
+	}
+	
+	if (working_tasks[m.client_id].first >= 
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
 		// task completed. send back to transferrer
 		m.type = MSG_NODE_REPLY | (m.type & WRITE_MASK);
+
 	}
 
 	return false;
