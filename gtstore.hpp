@@ -24,6 +24,7 @@ typedef vector<string> val_t;
 #define CONFIG_W	2
 
 #define MAX_ID_LENGTH	32
+#define MAX_KEY_LENGTH	20
 
 #define ERROR_MASK 1<<8
 #define CLIENT_MASK 1<<0
@@ -32,6 +33,23 @@ typedef vector<string> val_t;
 #define MANAGER_MASK 1<<3
 #define WRITE_MASK 1<<4
 #define REPLY_MASK 1<<5
+
+
+class Data {
+public:
+	uint64_t version = 0;
+	string	 value = "";
+	Data& operator=(Data& d) {
+		version = d.version;
+		value = d.value;
+		return *this;
+	}
+	int get_length() {
+		return 64 + value.size() + 1;
+	}
+};
+
+
 
 typedef enum {
 	MSG_CLIENT_REQUEST = CLIENT_MASK,
@@ -60,6 +78,9 @@ struct Message {
 	Message(int t, int cid, int nid, int l){set(t, cid, nid, l);}
 	~Message();
 	void print();
+
+	int set_key_data(string key, Data data);
+	int get_key_data(string& key, Data& data);
 } ;
 
 
@@ -77,9 +98,9 @@ public:
 };
 
 
-typedef string VirtualNodeID;
-typedef string StorageNodeID;
-typedef string ClientID;
+typedef int VirtualNodeID;
+typedef int StorageNodeID;
+typedef int ClientID;
 
 class NodeTable {
 private:
@@ -118,16 +139,6 @@ public:
 	NodeTable	node_table;
 	int nodefd;
 
-	class Data {
-	public:
-		uint64_t version;
-		string	 value;
-		Data& operator=(Data& d) {
-			version = d.version;
-			value = d.value;
-			return *this;
-		}
-	};
 	map<VirtualNodeID, unordered_map<string, Data>>	data;
 
 

@@ -27,7 +27,7 @@ void GTStoreStorage::init() {
 	int size;
 	struct sockaddr_un un;
 	un.sun_family = AF_UNIX;
-	string storage_node_addr = node_addr + "_" + id;
+	string storage_node_addr = node_addr + "_" + to_string(id);
 	strcpy(un.sun_path, storage_node_addr.data());
 	if ((nodefd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
 		perror("socket failed");
@@ -43,6 +43,23 @@ void GTStoreStorage::init() {
 		perror("listen failed");
 		exit(1);
 	}
+
+	// add to manager, get node id
+
+    int fd = open_clientfd(manager_addr);
+    if (fd < 0){
+        printf("error in clientfd\n");
+        exit(-1);
+    }
+    Message msg(MSG_NODE_REQUEST, -1, -1, 0);
+    msg.send(fd);
+    msg.recv(fd);
+	close(fd);
+	if (msg.type & ERROR_MASK){
+		printf("No available node\n");
+		//exit(1);
+	}
+
 	cout << "Inside GTStoreStorage::init()\n";
 }
 
@@ -104,7 +121,7 @@ void GTStoreStorage::exec() {
 }
 
 bool GTStoreStorage::process_client_request(Message& msg) {
-
+	
 	return false;
 }
 bool GTStoreStorage::process_node_request(Message& msg) {

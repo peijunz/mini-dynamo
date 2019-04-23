@@ -5,13 +5,16 @@
 int open_clientfd(const char *addr){
 	int fd;
 	struct sockaddr_un sun;
-	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+		perror ("Create socket error");
 		return -1;
+	}
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
 	strcpy(sun.sun_path, addr);
 	int len = offsetof(struct sockaddr_un, sun_path) + strlen(addr);
 	if (connect(fd, (struct sockaddr *)&sun, len) < 0) {
+		perror ("Socket connect error");
 		return -1;
 	}
 	return fd;
@@ -127,6 +130,20 @@ void Message::print(){
 	}
 };
 
+int Message::set_key_data(string key, Data data) {
+	if (key.size() > MAX_KEY_LENGTH)
+		return -1;
+	snprintf(this->data, MAX_KEY_LENGTH+1, "%s", key.data());
+	sprintf(this->data + MAX_KEY_LENGTH+1, "%lld %s\n", data.version, data.value.data());
+	return 0;
+}
+int Message::get_key_data(string& key, Data& data) {
+	sscanf(this->data, "%s", key.data());
+	sscanf(this->data + MAX_KEY_LENGTH+1, "%lld %s\n", &data.version, &data.value);
+	return 0;
+}
+
+
 ////////////////////////////////////////////////////
 void GTStoreClient::init(int id) {
 	
@@ -144,16 +161,37 @@ void GTStoreClient::init(int id) {
 	close(fd);
 	if (msg.type & ERROR_MASK){
 		printf("No available node\n");
-		exit(1);
+		//exit(1);
 	}
 	node_id = msg.node_id;
-	printf("Got contact %s\n", node_id);
+	printf("Got contact %d\n", node_id);
 }
 
 val_t GTStoreClient::get(string key) {
 	// Attempt to find its contact
 	// If failed, then ask manager for a new contact
 	
+	// send message to contact node
+	Data data;
+	Message msg(MSG_CLIENT_REQUEST, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
+	msg.data = new char[msg.length];
+	msg.set_key_data(key, data);
+	string nodeaddr = node_addr + "_" + to_string(node_id);
+	int fd = open_clientfd(nodeaddr.data());
+    if (fd < 0){
+        printf("error in clientfd\n");
+        exit(-1);
+    }
+	msg.send(fd, msg.data);
+	delete[] msg.data;
+	
+	close(fd);
+
+
+	// receive data
+	
+
+
 	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << "\n";
 	val_t value;
 	// Get the value!

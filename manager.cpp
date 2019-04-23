@@ -25,12 +25,12 @@ void GTStoreManager::init() {
 int manage_client_request(Message &m, int fd){
 	printf("Manager connected to some client\n");
 
-	printf("Got request from client");
+	printf("Got request from client\n");
 	m.type |= ERROR_MASK;
 	m.node_id = -1;
 	m.length = 0;
 	m.send(fd);
-	printf("Sent contact for client");
+	printf("Sent contact for client\n");
 	return 0;
 }
 
