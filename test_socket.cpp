@@ -42,7 +42,7 @@ int main() {
             char key[32], val[32];
             GTStoreClient client;
             client.init(i);
-            client.put("test_key_"+to_string(i), vector<string>{"test_val_"+to_string(i)});
+            client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
             client.get("test_key_"+to_string(i));
             return 0;
         }

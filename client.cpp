@@ -163,6 +163,7 @@ void NodeTable::add_virtual_node(VirtualNodeID vid) {
 		vid = num_virtual_nodes ++;
 	size_t hash_key = consistent_hash("virtual_node_" + to_string(vid));
 	virtual_nodes.insert({hash_key, vid});
+	printf ("\tvid=%d", vid);
 }
 
 void NodeTable::add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid) {
@@ -172,10 +173,12 @@ void NodeTable::add_storage_node(int num_vnodes, StorageNodeID& sid, vector<Virt
 		for (int i=0; i<num_vnodes; i++)
 			vvid.push_back(num_virtual_nodes ++);
 	}
+	printf ("sid=%d\n", sid);
 	for (VirtualNodeID vid : vvid) {
 		add_virtual_node(vid);
 		storage_nodes.insert({vid, sid});
 	}
+	printf ("\n");
 }
 
 

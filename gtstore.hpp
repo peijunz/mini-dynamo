@@ -59,6 +59,7 @@ typedef enum {
 	MSG_CLIENT_REQUEST = CLIENT_MASK,
 	MSG_CLIENT_REPLY = CLIENT_MASK | REPLY_MASK,
 	MSG_NODE_REQUEST = NODE_MASK,
+	MSG_MANAGER_REPLY = MANAGER_MASK | REPLY_MASK,
 	MSG_NODE_REPLY = NODE_MASK | REPLY_MASK,
 	MSG_COORDINATOR_REQUEST = COOR_MASK,
 	MSG_COORDINATOR_REPLY = COOR_MASK | REPLY_MASK,
@@ -180,6 +181,7 @@ public:
 	bool process_node_reply(Message& msg, int fd);
 	bool process_coordinator_request(Message& msg, int fd);
 	bool process_coordinator_reply(Message& msg, int fd);
+	bool process_manager_reply(Message& msg, int fd);
 };
 
 #endif

@@ -24,14 +24,15 @@ void GTStoreStorage::init(int num_vnodes) {
 		exit(1);
 	}
 
-	if (m.type != MSG_NODE_REPLY) {
+	if (m.type != MSG_MANAGER_REPLY) {
 		perror ("manager returns with unmatched message type!\n");
 		exit(-1);
 	}
 	id = m.node_id;
+	sscanf(m.data, "%d", &num_vnodes);
 	vector<VirtualNodeID> vvid(num_vnodes);
 	for (int i=0; i<num_vnodes; i++) {
-		sscanf(m.data + 64*i, "%d", &vvid[i]);
+		sscanf(m.data + 64*(i+1), "%d", &vvid[i]);
 	}
 	node_table.add_storage_node(num_vnodes, id, vvid);
 
@@ -121,6 +122,9 @@ void GTStoreStorage::exec() {
 				process_node_reply(m, connfd);
 			else
 				process_coordinator_request(m, connfd);
+		} else if (m.type & MANAGER_MASK) {
+			if (m.type & REPLY_MASK)
+				process_manager_reply(m, connfd);
 		}
 		close(connfd);
 	}
@@ -196,10 +200,26 @@ bool GTStoreStorage::process_coordinator_request(Message& m, int fd) {
 	return true;
 }
 
-bool GTStoreStorage::process_coordinator_reply(Message& msg, int fd) {
+bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
 	return false;
 }
 
+bool GTStoreStorage::process_manager_reply(Message& m, int fd) {
+	
+	// a new node with id==m.node_id joins
+	int num_vnodes;
+	sscanf(m.data, "%d", &num_vnodes);
+	vector<VirtualNodeID> vvid(num_vnodes);
+	for (int i=0; i<num_vnodes; i++) {
+		sscanf(m.data + 64*(i+1), "%d", &vvid[i]);
+	}
+	node_table.add_storage_node(num_vnodes, id, vvid);
+
+	printf ("Successfully add to manager!  Node ID = %d\n", id);
+	close(fd);
+
+	return true;
+}
 int main(int argc, char **argv) {
 
 	GTStoreStorage storage;

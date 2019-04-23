@@ -46,15 +46,26 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	node_table.add_storage_node(num_vnodes, sid, vvid);
 
 	// send back virtual node ids
-	m.type = MSG_NODE_REPLY;
+	m.type = MSG_MANAGER_REPLY;
 	m.node_id = sid;
 	if (m.data) delete[] m.data;
-	m.length = num_vnodes * 64;
+	m.length = (1 + num_vnodes) * 64;
 	m.data = new char[m.length];
+	sprintf(m.data, "%d", num_vnodes);
 	for (int i=0; i<num_vnodes; i++) {
-		sprintf(m.data + 64*i, "%d", vvid[i]);
+		sprintf(m.data + 64*(i+1), "%d", vvid[i]);
 	}
+
+	// broadcast to all nodes
 	m.send(fd, m.data);
+	close(fd);
+	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
+		if (nodeid == sid) continue;
+		string storage_node_addr = node_addr + "_" + to_string(nodeid);
+		fd = openfd(storage_node_addr.data());
+		m.send(fd, m.data);
+		close(fd);
+	}
 	if (m.data) delete[] m.data;
 	printf ("Add a new node\n");
 
