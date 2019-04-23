@@ -13,8 +13,7 @@ void GTStoreStorage::init(int num_vnodes) {
 		exit(1);
 	}
 	size = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
-	if (bind(nodefd, (struct sockaddr *)&un, size) < 0)
-	if ((nodefd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
+	if (bind(nodefd, (struct sockaddr *)&un, size) < 0) {
 		perror("bind failed");
 		exit(1);
 	}
@@ -34,7 +33,7 @@ void GTStoreStorage::init(int num_vnodes) {
 	m.length = 64;
 	m.data = new char[m.length];
 	sprintf(m.data, "%d", num_vnodes);
-    m.send(fd);
+    m.send(fd, m.data);
     m.recv(fd);
 
 	if (m.type != MSG_NODE_REPLY) {
@@ -47,12 +46,12 @@ void GTStoreStorage::init(int num_vnodes) {
 		sscanf(m.data + 64*i, "%d", &vvid[i]);
 	}
 	node_table.add_storage_node(num_vnodes, id, vvid);
-	printf ("Successfully add to manager!\n");
+	printf ("Successfully add to manager!  Node ID = %d\n", id);
 
 	close(fd);
 	if (m.type & ERROR_MASK){
 		printf("No available node\n");
-		//exit(1);
+		exit(1);
 	}
 
 	cout << "Inside GTStoreStorage::init()\n";
