@@ -106,24 +106,35 @@ void GTStoreStorage::exec() {
 		m.recv(connfd);
 		printf("Manager connected to some client\n");
 		if (m.type & CLIENT_MASK) {
-			process_client_request(m);
+			process_client_request(m, connfd);
 		} else if (m.type & NODE_MASK) {
-			process_node_request(m);
+			process_node_request(m, connfd);
 		} else if (m.type & COOR_MASK) {
-			process_coordinator_request(m);
+			process_coordinator_request(m, connfd);
 		}
 		close(connfd);
 	}
 }
 
-bool GTStoreStorage::process_client_request(Message& msg) {
-
+bool GTStoreStorage::process_client_request(Message& msg, int fd) {
+	// Find coordinator and forward request
+	int offset = strnlen(msg.data, msg.length)+1;
+	char *val = msg.data + offset;
+	StorageNodeID sid = find_coordinator(msg.data);
+	if (sid == id){
+		// Do not forward
+	}
+	else{
+		// Forward message
+	}
 	return false;
 }
-bool GTStoreStorage::process_node_request(Message& msg) {
+bool GTStoreStorage::process_node_request(Message& msg, int fd) {
+	// collect R/W from pref list
 	return false;
 }
-bool GTStoreStorage::process_coordinator_request(Message& msg) {
+bool GTStoreStorage::process_coordinator_request(Message& msg, int fd) {
+	// Do as coordinator asked to do
 	return false;
 }
 

@@ -2,7 +2,7 @@
 
 // Utility functions
 
-int open_clientfd(const char *addr){
+int openfd(const char *addr){
 	int fd;
 	struct sockaddr_un sun;
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
@@ -133,7 +133,7 @@ void GTStoreClient::init(int id) {
 	cout << "Inside GTStoreClient::init() for client " << id << "\n";
 	client_id = id;
 	char buf[32];
-    int fd = open_clientfd(manager_addr);
+    int fd = openfd(manager_addr);
     if (fd < 0){
         printf("error in clientfd\n");
         exit(-1);

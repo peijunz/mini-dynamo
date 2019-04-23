@@ -42,7 +42,7 @@ typedef enum {
 	MSG_COORDINATOR_REPLY = COOR_MASK | REPLY_MASK,
 } message_type_t;
 
-int open_clientfd(const char *addr);
+int openfd(const char *addr);
 ssize_t rio_writen(int fd, const char* buf, size_t n);
 ssize_t rio_readn(int fd, char* buf, size_t n);
 int read_line(int fd, char* buf, size_t n, int *loc);
@@ -148,9 +148,9 @@ public:
 
 	void exec();
 
-	bool process_client_request(Message& msg);
-	bool process_node_request(Message& msg);
-	bool process_coordinator_request(Message& msg);
+	bool process_client_request(Message& msg, int fd);
+	bool process_node_request(Message& msg, int fd);
+	bool process_coordinator_request(Message& msg, int fd);
 };
 
 #endif
