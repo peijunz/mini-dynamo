@@ -143,13 +143,13 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	int offset = strnlen(m.data, m.length)+1;
 	char *val = m.data + offset;
 	StorageNodeID sid = find_coordinator(m.data);
+	forward_tasks[m.client_id] = fd;
 	if (sid == id){
 		// Do not forward, reply and then close
 		process_node_request(m, fd);
 	}
 	else{
 		// Forward message
-		forward_tasks[m.client_id] = fd;
 		m.type = MSG_NODE_REQUEST | (m.type & WRITE_MASK);
 		int fwdfd = openfd(storage_node_addr(sid).data());
 		m.send(fwdfd, m.data);
