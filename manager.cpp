@@ -29,6 +29,7 @@ void GTStoreManager::exec(){
     	if (connfd == -1) {
         	perror("Accept fail");
 		}
+		Message m(connfd);
 		printf("Manager connected to some client\n");
 		close(connfd);
 	}
