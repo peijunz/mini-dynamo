@@ -36,7 +36,7 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 
 
 void GTStoreStorage::init() {
-	
+	// TODO: Contact Manager to get global data
 	int size;
 	struct sockaddr_un un;
 	un.sun_family = AF_UNIX;
