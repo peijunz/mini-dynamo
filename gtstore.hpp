@@ -204,9 +204,10 @@ public:
 	public:
 		uint64_t version;
 		string	 value;
-		bool operator=(Data& d) {
+		Data& operator=(Data& d) {
 			version = d.version;
 			value = d.value;
+			return *this;
 		}
 	};
 	map<VirtualNodeID, unordered_map<string, Data>>	data;

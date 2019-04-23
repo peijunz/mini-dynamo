@@ -2,7 +2,7 @@
 
 
 
-vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size=1) {
+vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
 	size_t hash_key = consistent_hash(key);
 	auto it = virtual_nodes.upper_bound(hash_key);
 	vector<pair<VirtualNodeID, StorageNodeID>>	pref_list;
@@ -92,11 +92,11 @@ void GTStoreStorage::exec() {
 		Message m(connfd);
 		printf("Manager connected to some client\n");
 		if (m.type | CLIENT_MASK) {
-
+			process_client_request(m);
 		} else if (m.type | NODE_MASK) {
-
+			process_node_request(m);
 		} else if (m.type | COOR_MASK) {
-			
+			process_coordinator_request(m);
 		}
 		close(connfd);
 	}
