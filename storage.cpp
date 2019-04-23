@@ -146,9 +146,6 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	if (sid == id){
 		// Do not forward, reply and then close
 		process_node_request(m, fd);
-		// m.data
-		// m.send(fd)
-		// close(fd);
 	}
 	else{
 		// Forward message
