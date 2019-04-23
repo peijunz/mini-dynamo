@@ -4,7 +4,6 @@ CC      = g++
 RM      = /bin/rm -rf
 
 TESTS = test_app manager storage test_socket
-CPP_FILES = client.cpp storage.cpp manager.cpp
 OBJS =  client.o
 
 all: $(TESTS)
@@ -25,4 +24,4 @@ clean:
 	$(RM) *.o $(TESTS)
 
 test_socket: $(OBJS)
-	$(CC) $(CFLAGS) $(CPP_FILES) test_socket.cpp -o test_socket
+$(CC) $(CFLAGS) $(OBJS) test_socket.cpp -o test_socket
