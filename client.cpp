@@ -112,7 +112,7 @@ int Message::recv(int fd){
 	// if (length>0){
 	data = new char[length+1];
 	data[length] = 0;
-	strncpy(data, buf+offset, n-offset);
+	memcpy(data, buf+offset, n-offset);
 	rio_readn(fd, data+n-offset, length-(n-offset));
 	// }
 	return 0;

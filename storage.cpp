@@ -30,11 +30,16 @@ void GTStoreStorage::init(int num_vnodes) {
 	}
 	id = m.node_id;
 	sscanf(m.data, "%d", &num_vnodes);
-	vector<VirtualNodeID> vvid(num_vnodes);
+	VirtualNodeID vid;
+	StorageNodeID sid;
 	for (int i=0; i<num_vnodes; i++) {
-		sscanf(m.data + 16*(i+1), "%d", &vvid[i]);
+		sscanf(m.data + 16 + i * 32, "%d", &vid);
+		sscanf(m.data + 32 + i * 32, "%d", &sid);
+		node_table.add_virtual_node(vid);
+		node_table.storage_nodes.insert({vid, sid});
+		printf ("{%d, %d}\t", vid, sid);
 	}
-	node_table.add_storage_node(num_vnodes, id, vvid);
+	printf("\n");
 
 	printf ("Successfully add to manager!  Node ID = %d\n", id);
 	close(fd);
@@ -210,10 +215,12 @@ bool GTStoreStorage::process_manager_reply(Message& m, int fd) {
 	int num_vnodes;
 	sscanf(m.data, "%d", &num_vnodes);
 	vector<VirtualNodeID> vvid(num_vnodes);
+	printf ("%d join, %d vnodes\n", m.node_id, num_vnodes);
+	printf ("%.*s\n", m.length, m.data);
 	for (int i=0; i<num_vnodes; i++) {
 		sscanf(m.data + 16*(i+1), "%d", &vvid[i]);
 	}
-	node_table.add_storage_node(num_vnodes, id, vvid);
+	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
 
 	printf ("Successfully add to manager!  Node ID = %d\n", id);
 	close(fd);

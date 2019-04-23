@@ -48,27 +48,39 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	printf("Manager connected to some node\n");
 
 	printf("");
-	int num_vnodes;
-	sscanf(m.data, "%d", &num_vnodes);
+	int num_new_vnodes;
+	sscanf(m.data, "%d", &num_new_vnodes);
 	int sid = -1;
 	vector<VirtualNodeID> vvid = {};
-	node_table.add_storage_node(num_vnodes, sid, vvid);
+	node_table.add_storage_node(num_new_vnodes, sid, vvid);
 
-	// send back virtual node ids
 	m.type = MSG_MANAGER_REPLY;
 	m.node_id = sid;
 	storage_nodes.insert(sid);
+
+	// copy to new node
 	if (m.data) delete[] m.data;
-	m.length = (1 + num_vnodes) * 16;
+	int num_vnodes = node_table.storage_nodes.size();
+	m.length = 16 + 32 * num_vnodes;
 	m.data = new char[m.length];
 	sprintf(m.data, "%d", num_vnodes);
-	for (int i=0; i<num_vnodes; i++) {
-		sprintf(m.data + 16*(i+1), "%d", vvid[i]);
+	int i = 0;
+	for (auto& p : node_table.storage_nodes) {
+		sprintf(m.data + 16 + i * 32, "%d", p.first);
+		sprintf(m.data + 32 + i * 32, "%d", p.second);
+		i ++;
 	}
-
-	// broadcast to all nodes
 	m.send(fd, m.data);
 	close(fd);
+
+	// broadcast to old nodes
+	if (m.data) delete[] m.data;
+	m.length = (1 + num_new_vnodes) * 16;
+	m.data = new char[m.length];
+	sprintf(m.data, "%d", num_new_vnodes);
+	for (int i=0; i<num_new_vnodes; i++) {
+		sprintf(m.data + 16*(i+1), "%d", vvid[i]);
+	}
 	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
 		if (nodeid == sid) continue;
 		string storage_node_addr = node_addr + "_" + to_string(nodeid);
@@ -76,6 +88,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 		m.send(fd, m.data);
 		close(fd);
 	}
+
 	if (m.data) delete[] m.data;
 	printf ("Add a new node\n");
 
