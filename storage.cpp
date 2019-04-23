@@ -265,6 +265,9 @@ bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
 			m.send(nodefd, m.data);
 			close(nodefd);
 		}
+
+		// delete task
+		working_tasks.erase(m.client_id);
 	}
 
 	return false;
