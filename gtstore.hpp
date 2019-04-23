@@ -156,7 +156,8 @@ public:
 	map<VirtualNodeID, unordered_map<string, Data>>	data;
 
 	// tasks
-	unordered_map<ClientID, int>	current_task;
+	unordered_map<ClientID, int>	pending_tasks;	// task --> socket
+	unordered_map<ClientID, int>	working_tasks;	// task --> number of received results
 
 
 	void init(int num_vnodes=CONFIG_N);
