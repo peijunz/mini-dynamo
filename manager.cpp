@@ -10,8 +10,7 @@ void GTStoreManager::init() {
 		exit(1);
 	}
 	size = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
-	if (bind(managerfd, (struct sockaddr *)&un, size) < 0)
-	if ((managerfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
+	if (bind(managerfd, (struct sockaddr *)&un, size) < 0){
 		perror("bind failed");
 		exit(1);
 	}
