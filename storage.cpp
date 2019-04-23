@@ -153,7 +153,7 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	else{
 		// Forward message
 		forward_tasks[m.client_id] = fd;
-		m.type = MSG_COORDINATOR_REQUEST;
+		m.type = MSG_NODE_REQUEST | (m.type & WRITE_MASK);
 		int fwdfd = openfd(storage_node_addr(sid).data());
 		m.send(fwdfd, m.data);
 		close(fwdfd);
@@ -194,7 +194,7 @@ bool GTStoreStorage::process_node_request(Message& m, int fd) {
 	return false;
 }
 
-bool GTStoreStorage::process_node_reply(Message& msg, int fd) {
+bool GTStoreStorage::process_node_reply(Message& m, int fd) {
 	return false;
 }
 bool GTStoreStorage::process_coordinator_request(Message& m, int fd) {
@@ -237,16 +237,26 @@ bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
 		working_tasks[m.client_id].second = data;
 	}
 
+
+
 	if (working_tasks[m.client_id].first >= 
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
-		// task completed. send back to transferrer
-		m.type = MSG_NODE_REPLY | (m.type & WRITE_MASK);
-		m.set_key_data(key, working_tasks[m.client_id].second);
-		string transferrer_addr = node_addr + "_" + to_string(m.node_id);
-		int nodefd = openfd(transferrer_addr.data());
-		m.send(nodefd, m.data);
-		close(nodefd);
+		// task completed. 
+
+		if (m.node_id == id) {
+			// if itself is the coordinator
+			m.set_key_data(key, working_tasks[m.client_id].second);
+			process_node_reply(m, -1);
+		} else {
+			// send back to transferrer
+			m.type = MSG_NODE_REPLY | (m.type & WRITE_MASK);
+			m.set_key_data(key, working_tasks[m.client_id].second);
+			string transferrer_addr = node_addr + "_" + to_string(m.node_id);
+			int nodefd = openfd(transferrer_addr.data());
+			m.send(nodefd, m.data);
+			close(nodefd);
+		}
 	}
 
 	return false;
