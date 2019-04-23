@@ -45,7 +45,7 @@ struct Message {
 	char client_id[MAX_ID_LENGTH];
 	char node_id[MAX_ID_LENGTH];
 	size_t length;
-	char data[];
+	char *data;
 } ;
 
 
@@ -112,7 +112,7 @@ public:
 
 	void init();
 
-	// storage node functions
+	// data functions
 	bool read_local(string key, Data& data, VirtualNodeID);
 	bool write_local(string key, Data data, VirtualNodeID);
 

@@ -46,7 +46,7 @@ bool GTStoreStorage::read_local(string key, Data& data, VirtualNodeID v_id) {
 	}
 	
 }
-bool GTStoreStorage::write_local(string key, Data data, VirtualNodeID v_id) {{
+bool GTStoreStorage::write_local(string key, Data data, VirtualNodeID v_id) {
 	if (this->data.count(v_id) == 0 ||
 		this->data[v_id].count(key) == 0 ||
 		this->data[v_id][key].version < data.version)
@@ -54,7 +54,7 @@ bool GTStoreStorage::write_local(string key, Data data, VirtualNodeID v_id) {{
 		this->data[v_id][key] = data;
 	}
 	return true;
-}}
+}
 
 
 StorageNodeID GTStoreStorage::find_coordinator(string key) {
@@ -64,7 +64,7 @@ StorageNodeID GTStoreStorage::find_coordinator(string key) {
 
 
 bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualNodeID) {
-	
+
 }
 
 
