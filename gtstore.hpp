@@ -46,7 +46,7 @@ struct Message {
 	char client_id[MAX_ID_LENGTH];
 	char node_id[MAX_ID_LENGTH];
 	size_t length;
-	char *data;
+	char *data=NULL;
 
 	ssize_t rio_writen(int fd, char* buf, size_t n) {
 		size_t rem = n;
@@ -107,10 +107,23 @@ struct Message {
 	Message(int t, char*cid, char*nid, int l):type(t), length(l){
 		strcpy(client_id, cid);
 		strcpy(node_id, nid);
-		data = new char[length+1];
-		data[length] = 0;
 	}
-	int send_to(char* addr){
+	int send_to(char* addr, char*content){
+		char header[256];
+		struct sockaddr_un sun;
+		int fd=0;
+		if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+			return -1;
+		memset(&sun, 0, sizeof(sun));
+		sun.sun_family = AF_UNIX;
+		strcpy(sun.sun_path, addr);
+		int len = offsetof(struct sockaddr_un, sun_path) + strlen(addr);
+		if (connect(fd, (struct sockaddr *)&sun, len) < 0) {
+			return -1;
+		}
+		sprintf(header, "%d %s %s %d\n", type, client_id, node_id, length);
+		rio_writen(fd, header, strlen(header));
+		rio_writen(fd, content, length);
 		return 0;
 	}
 	Message(int fd){
@@ -128,7 +141,8 @@ struct Message {
 		rio_readn(fd, data+n-offset, length-(n-offset));
 	}
 	~Message(){
-		delete[] data;
+		if (data!=NULL)
+			delete[] data;
 	}
 } ;
 
