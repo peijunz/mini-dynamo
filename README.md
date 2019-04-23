@@ -23,6 +23,8 @@ Because we potentially need to migrate virtual nodes among storage nodes, the da
 ## Request of Clients
 > There are two strategies that a client can use to select a node: (1) route its request through a generic load balancer that will select a node based on load information, or (2) use a partition-aware client library that routes requests directly to the appropriate coordinator nodes. 
 
+The client request manager for a contact node during initialization.
+
 
 ## Initial Implementation
 + Every message establish a new socket

@@ -22,6 +22,24 @@ void GTStoreManager::init() {
 	cout << "GTStoreManager::init() Done\n";
 }
 
+int manage_client_request(Message &m, int fd){
+	printf("Manager connected to some client\n");
+
+	printf("Got request from client");
+	m.type |= ERROR_MASK;
+	m.node_id = -1;
+	m.length = 0;
+	m.send(fd);
+	printf("Sent contact for client");
+	return 0;
+}
+
+int manage_node_request(Message &m, int fd){
+	// Manage entrance and exit status of nodes
+	printf("Manager connected to some node\n");
+	return 0;
+}
+
 void GTStoreManager::exec(){
 	int connfd;
 	while (1){
@@ -31,15 +49,11 @@ void GTStoreManager::exec(){
 		}
 		Message m;
 		m.recv(connfd);
-		printf("Manager connected to some client\n");
 		m.print();
-		if (m.type == MSG_CLIENT_REQUEST){
-			printf("Got request from client");
-			m.type = MSG_ERROR;
-			m.node_id = -1;
-			m.length = 0;
-			m.send(connfd);
-			printf("Sent contact for client");
+		if (m.type & CLIENT_MASK) {
+			manage_client_request(m, connfd);
+		} else if (m.type & NODE_MASK) {
+			manage_node_request(m, connfd);
 		}
 		close(connfd);
 	}

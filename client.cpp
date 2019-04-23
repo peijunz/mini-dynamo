@@ -141,17 +141,18 @@ void GTStoreClient::init(int id) {
     Message msg(MSG_CLIENT_REQUEST, client_id, -1, 0);
     msg.send(fd);
     msg.recv(fd);
-	if (msg.type != -1){
-		node_id = msg.node_id;
-		printf("Got contact %s\n", node_id);
-	}
-	else{
+	close(fd);
+	if (msg.type & ERROR_MASK){
 		printf("No available node\n");
 		exit(1);
 	}
+	node_id = msg.node_id;
+	printf("Got contact %s\n", node_id);
 }
 
 val_t GTStoreClient::get(string key) {
+	// Attempt to find its contact
+	// If failed, then ask manager for a new contact
 	
 	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << "\n";
 	val_t value;
@@ -160,6 +161,8 @@ val_t GTStoreClient::get(string key) {
 }
 
 bool GTStoreClient::put(string key, val_t value) {
+	// Attempt to find its contact
+	// If failed, then ask manager for a new contact
 
 	string print_value = "";
 	for (uint i = 0; i < value.size(); i++) {

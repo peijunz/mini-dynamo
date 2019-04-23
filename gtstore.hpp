@@ -25,6 +25,7 @@ typedef vector<string> val_t;
 
 #define MAX_ID_LENGTH	32
 
+#define ERROR_MASK 1<<8
 #define CLIENT_MASK 1<<0
 #define NODE_MASK 1<<1
 #define COOR_MASK 1<<2
@@ -39,7 +40,6 @@ typedef enum {
 	MSG_NODE_REPLY = NODE_MASK | REPLY_MASK,
 	MSG_COORDINATOR_REQUEST = COOR_MASK,
 	MSG_COORDINATOR_REPLY = COOR_MASK | REPLY_MASK,
-	MSG_ERROR = -1
 } message_type_t;
 
 int open_clientfd(const char *addr);
