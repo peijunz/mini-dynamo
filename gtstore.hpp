@@ -156,10 +156,8 @@ public:
 	map<VirtualNodeID, unordered_map<string, Data>>	data;
 
 	// tasks
-	unordered_map<ClientID, int>	current_task;
-	// clientid, client socket to reply
-	unordered_map<ClientID, int>	forward_task;
-
+	unordered_map<ClientID, int>	forward_tasks;	// task --> socket
+	unordered_map<ClientID, Data>	working_tasks;	// task --> received results
 
 	void init(int num_vnodes=CONFIG_N);
 
