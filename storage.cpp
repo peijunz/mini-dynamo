@@ -207,12 +207,17 @@ bool GTStoreStorage::process_coordinator_request(Message& m, int fd) {
 }
 
 bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
+	if (working_tasks.count(m.client_id) == 0) {
+		// task is already completed. Ignore redundant result
+		return false;
+	}
+
 	working_tasks[m.client_id] ++;
-	if (working_tasks[m.client_id] == 
+	if (working_tasks[m.client_id] >= 
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
 		// task completed. send back to transferrer
-		
+		m.type = MSG_NODE_REPLY | (m.type & WRITE_MASK);
 	}
 
 	return false;
