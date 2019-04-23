@@ -42,8 +42,9 @@ int main() {
             char key[32], val[32];
             GTStoreClient client;
             client.init(i);
-            client.put("test_key_"+to_string(i), vector<string>{"test_val_"+to_string(i)});
-            client.get("test_key_"+to_string(i));
+            printf("node_id %d for client %d\n", client.node_id, client.client_id);
+            // client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
+            // client.get("test_key_"+to_string(i));
             return 0;
         }
         children.push_back(pid);

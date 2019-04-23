@@ -21,7 +21,7 @@ test_app: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) test_app.cpp -o test_app
 
 clean:
-	$(RM) *.o $(TESTS)
+	$(RM) *.o $(TESTS) *.socket*
 
 test_socket: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) test_socket.cpp -o test_socket
