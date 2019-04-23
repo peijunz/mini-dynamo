@@ -140,6 +140,5 @@ int main(int argc, char **argv) {
 
 	GTStoreStorage storage;
 	storage.init();
-	//storage.exec();
-	
+	storage.exec();
 }
