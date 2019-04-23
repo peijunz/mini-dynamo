@@ -236,13 +236,17 @@ bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
 		// new version, update result
 		working_tasks[m.client_id].second = data;
 	}
-	
+
 	if (working_tasks[m.client_id].first >= 
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
 		// task completed. send back to transferrer
 		m.type = MSG_NODE_REPLY | (m.type & WRITE_MASK);
-
+		m.set_key_data(key, working_tasks[m.client_id].second);
+		string transferrer_addr = node_addr + "_" + to_string(m.node_id);
+		int nodefd = openfd(transferrer_addr.data());
+		m.send(nodefd, m.data);
+		close(nodefd);
 	}
 
 	return false;
