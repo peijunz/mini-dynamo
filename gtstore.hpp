@@ -39,6 +39,7 @@ typedef enum {
 	MSG_NODE_REPLY = NODE_MASK | REPLY_MASK,
 	MSG_COORDINATOR_REQUEST = COOR_MASK,
 	MSG_COORDINATOR_REPLY = COOR_MASK | REPLY_MASK,
+	MSG_ERROR = -1
 } message_type_t;
 
 int open_clientfd(const char *addr);
@@ -48,13 +49,15 @@ int read_line(int fd, char* buf, size_t n, int *loc);
 
 struct Message {
 	int type;
-	char client_id[MAX_ID_LENGTH];
-	char node_id[MAX_ID_LENGTH];
+	int client_id;
+	int node_id;
 	size_t length;
 	char *data=NULL;
-	Message(int fd);
-	Message(int t, const char *cid, const char *nid, int l);
-	int send_to(int fd, const char *content);
+	int set(int t, int cid, int nid, int l);
+	int send(int fd, const char *content=NULL);
+	int recv(int fd);
+	Message(){}
+	Message(int t, int cid, int nid, int l){set(t, cid, nid, l);}
 	~Message();
 	void print();
 } ;
@@ -64,6 +67,7 @@ struct Message {
 class GTStoreClient {
 private:
 	int client_id;
+	int node_id; // Major contact node for this client
 	val_t value;
 public:
 	void init(int id);

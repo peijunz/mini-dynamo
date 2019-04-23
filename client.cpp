@@ -78,18 +78,20 @@ int read_line(int fd, char* buf, size_t n, int *loc) {
 //////////////////  Message Send/Recv  //////////////////////
 
 
-Message::Message(int t, const char *cid, const char *nid, int l){
+int Message::set(int t, int cid, int nid, int l){
 	type = t;
 	length = l;
-	strcpy(client_id, cid);
-	strcpy(node_id, nid);
+	client_id = cid;
+	node_id = nid;
+	return 0;
 }
 
 int Message::send(int fd, const char *content){
 	char header[256];
-	sprintf(header, "%d %s %s %ld\n", type, client_id, node_id, length);
+	sprintf(header, "%d %d %d %ld\n", type, client_id, node_id, length);
 	rio_writen(fd, header, strlen(header));
-	rio_writen(fd, content, length);
+	if (content)
+		rio_writen(fd, content, length);
 	return 0;
 }
 
@@ -103,11 +105,13 @@ int Message::recv(int fd){
 		fprintf(stderr, "Failed in reading message\n");
 		exit(-1);
 	}
-	sscanf(buf, "%d %s %s %ld\n", &type, client_id, node_id, &length);
+	sscanf(buf, "%d %d %d %ld\n", &type, &client_id, &node_id, &length);
+	// if (length>0){
 	data = new char[length+1];
 	data[length] = 0;
 	strncpy(data, buf+offset, n-offset);
 	rio_readn(fd, data+n-offset, length-(n-offset));
+	// }
 	return 0;
 }
 
@@ -117,8 +121,8 @@ Message::~Message(){
 }
 
 void Message::print(){
-	printf("%d %s %s %ld\n", type, client_id, node_id, length);
-	if (data){
+	printf("%d %d %d %ld\n", type, client_id, node_id, length);
+	if (length && data){
 		printf("%.*s\n\n", (int)length, data);
 	}
 };
@@ -128,6 +132,23 @@ void GTStoreClient::init(int id) {
 	
 	cout << "Inside GTStoreClient::init() for client " << id << "\n";
 	client_id = id;
+	char buf[32];
+    int fd = open_clientfd(manager_addr);
+    if (fd < 0){
+        printf("error in clientfd\n");
+        exit(-1);
+    }
+    Message msg(MSG_CLIENT_REQUEST, client_id, -1, 0);
+    msg.send(fd);
+    msg.recv(fd);
+	if (msg.type != -1){
+		node_id = msg.node_id;
+		printf("Got contact %s\n", node_id);
+	}
+	else{
+		printf("No available node\n");
+		exit(1);
+	}
 }
 
 val_t GTStoreClient::get(string key) {

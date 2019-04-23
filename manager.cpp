@@ -33,6 +33,14 @@ void GTStoreManager::exec(){
 		m.recv(connfd);
 		printf("Manager connected to some client\n");
 		m.print();
+		if (m.type == MSG_CLIENT_REQUEST){
+			printf("Got request from client");
+			m.type = MSG_ERROR;
+			m.node_id = -1;
+			m.length = 0;
+			m.send(connfd);
+			printf("Sent contact for client");
+		}
 		close(connfd);
 	}
 }
