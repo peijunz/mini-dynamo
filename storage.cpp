@@ -2,7 +2,7 @@
 
 
 
-vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size=1) {
+vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
 	size_t hash_key = consistent_hash(key);
 	auto it = virtual_nodes.upper_bound(hash_key);
 	vector<pair<VirtualNodeID, StorageNodeID>>	pref_list;
@@ -64,7 +64,7 @@ StorageNodeID GTStoreStorage::find_coordinator(string key) {
 
 
 bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualNodeID) {
-	
+	return false;
 }
 
 

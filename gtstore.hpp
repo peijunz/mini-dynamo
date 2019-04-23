@@ -121,7 +121,7 @@ struct Message {
 		if (connect(fd, (struct sockaddr *)&sun, len) < 0) {
 			return -1;
 		}
-		sprintf(header, "%d %s %s %d\n", type, client_id, node_id, length);
+		sprintf(header, "%d %s %s %ld\n", type, client_id, node_id, length);
 		rio_writen(fd, header, strlen(header));
 		rio_writen(fd, content, length);
 		return 0;
@@ -134,7 +134,7 @@ struct Message {
 			fprintf(stderr, "Failed in reading message\n");
 			exit(-1);
 		}
-		sscanf(buf, "%d %s %s %d\n", &type, client_id, node_id, &length);
+		sscanf(buf, "%d %s %s %ld\n", &type, client_id, node_id, &length);
 		data = new char[length+1];
 		data[length] = 0;
 		strncpy(data, buf+offset, n-offset);
@@ -144,6 +144,12 @@ struct Message {
 		if (data!=NULL)
 			delete[] data;
 	}
+	void print(){
+		printf("%d %s %s %ld\n", type, client_id, node_id, length);
+		if (data){
+			printf("%.*s\n\n", (int)length, data);
+		}
+	};
 } ;
 
 
@@ -166,9 +172,10 @@ typedef string ClientID;
 
 class NodeTable {
 private:
-	static const hash<string>	consistent_hash;
 
 public:
+	hash<string>	consistent_hash;
+	// hash<string>(s)
 	map<size_t, VirtualNodeID>	virtual_nodes;
 	map<size_t, StorageNodeID> 	storage_nodes;
 	unordered_map<StorageNodeID, int>	socket_map;
@@ -183,7 +190,7 @@ public:
 
 
 
-constexpr char* manager_addr="manager.socket";
+constexpr char manager_addr[]="manager.socket";
 constexpr int listenQ = 20;
 
 class GTStoreManager {
@@ -202,9 +209,10 @@ public:
 	public:
 		uint64_t version;
 		string	 value;
-		bool operator=(Data& d) {
+		Data& operator=(Data& d) {
 			version = d.version;
 			value = d.value;
+			return *this;
 		}
 	};
 	map<VirtualNodeID, unordered_map<string, Data>>	data;
