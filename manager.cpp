@@ -71,8 +71,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	close(fd);
 	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
 		if (nodeid == sid) continue;
-		string storage_node_addr = node_addr + "_" + to_string(nodeid);
-		fd = openfd(storage_node_addr.data());
+		fd = openfd(storage_node_addr(nodeid).data());
 		m.send(fd, m.data);
 		close(fd);
 	}

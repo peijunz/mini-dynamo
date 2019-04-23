@@ -129,7 +129,7 @@ public:
 };
 
 
-
+#define storage_node_addr(id) (node_addr + "_" + to_string(id))
 
 const string node_addr = "node.socket";
 constexpr char manager_addr[]="manager.socket";
@@ -157,6 +157,8 @@ public:
 
 	// tasks
 	unordered_map<ClientID, int>	current_task;
+	// clientid, client socket to reply
+	unordered_map<ClientID, int>	forward_task;
 
 
 	void init(int num_vnodes=CONFIG_N);

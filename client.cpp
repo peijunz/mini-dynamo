@@ -265,24 +265,22 @@ val_t GTStoreClient::get(string key) {
 	msg.data = new char[msg.length];
 	msg.set_key_data(key, data);
 	string nodeaddr = node_addr + "_" + to_string(node_id);
-	int fd = openfd(nodeaddr.data());
+	int fd = openfd(nodeaddr.c_str());
     if (fd < 0){
         printf("error in clientfd\n");
         exit(-1);
     }
 	msg.send(fd, msg.data);
-	delete[] msg.data;
-	
-	close(fd);
-
 
 	// receive data
-	
+	msg.recv(fd);
 
 
 	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << "\n";
 	val_t value;
 	// Get the value!
+	
+	close(fd);
 	return value;
 }
 

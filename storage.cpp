@@ -43,9 +43,8 @@ void GTStoreStorage::init(int num_vnodes) {
 	int size;
 	struct sockaddr_un un;
 	un.sun_family = AF_UNIX;
-	string storage_node_addr = node_addr + "_" + to_string(id);
-	unlink(storage_node_addr.data());
-	strcpy(un.sun_path, storage_node_addr.data());
+	unlink(storage_node_addr(id).data());
+	strcpy(un.sun_path, storage_node_addr(id).data());
 	if ((nodefd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
 		perror("socket failed");
 		exit(1);
@@ -111,22 +110,26 @@ void GTStoreStorage::exec() {
 		m.recv(connfd);
 		printf("Manager connected to some client\n");
 		if (m.type & CLIENT_MASK) {
+			// Because client does not listen, we do not
+			// close client until we got a reply
 			process_client_request(m, connfd);
-		} else if (m.type & NODE_MASK) {
-			if (m.type & REPLY_MASK)
-				process_node_reply(m, connfd);
-			else
-				process_node_request(m, connfd);
-		} else if (m.type & COOR_MASK) {
-			if (m.type & REPLY_MASK)
-				process_node_reply(m, connfd);
-			else
-				process_coordinator_request(m, connfd);
-		} else if (m.type & MANAGER_MASK) {
-			if (m.type & REPLY_MASK)
-				process_manager_reply(m, connfd);
+		} else{
+			if (m.type & NODE_MASK) {
+				if (m.type & REPLY_MASK)
+					process_node_reply(m, connfd);
+				else
+					process_node_request(m, connfd);
+			} else if (m.type & COOR_MASK) {
+				if (m.type & REPLY_MASK)
+					process_node_reply(m, connfd);
+				else
+					process_coordinator_request(m, connfd);
+			} else if (m.type & MANAGER_MASK) {
+				if (m.type & REPLY_MASK)
+					process_manager_reply(m, connfd);
+			}
+			close(connfd);
 		}
-		close(connfd);
 	}
 }
 
@@ -136,10 +139,19 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	char *val = m.data + offset;
 	StorageNodeID sid = find_coordinator(m.data);
 	if (sid == id){
-		// Do not forward
+		// Do not forward, reply and then close
+		process_node_request(m, fd);
+		// m.data
+		// m.send(fd)
+		// close(fd);
 	}
 	else{
 		// Forward message
+		forward_task[m.client_id] = fd;
+		m.type = MSG_COORDINATOR_REQUEST;
+		int fwdfd = openfd(storage_node_addr(sid).data());
+		m.send(fwdfd, m.data);
+		close(fwdfd);
 	}
 	return false;
 }
