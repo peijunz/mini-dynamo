@@ -22,9 +22,9 @@ using namespace std;
 typedef vector<string> val_t;
 
 #define CONFIG_V	3
-#define CONFIG_N	1
+#define CONFIG_N	2
 #define CONFIG_R	1
-#define CONFIG_W	1
+#define CONFIG_W	2
 
 #define MAX_ID_LENGTH	32
 #define MAX_KEY_LENGTH	20
@@ -182,13 +182,14 @@ public:
 
 
 	void exec();
-
+	// Exclusive connection to client/manager
 	bool process_client_request(Message& msg, int fd);
-	bool process_forward_request(Message& msg, int fd);
-	bool process_forward_reply(Message& msg, int fd);
-	bool process_coordinate_request(Message& msg, int fd);
-	bool process_coordinate_reply(Message& msg, int fd);
 	bool process_manage_reply(Message& msg, int fd);
+	// Communication between nodes
+	bool process_forward_request(Message& msg);
+	bool process_forward_reply(Message& msg);
+	bool process_coordinate_request(Message& msg);
+	bool process_coordinate_reply(Message& msg);
 	bool finish_coordination(Message &m, string &key);
 };
 

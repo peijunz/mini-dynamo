@@ -125,14 +125,14 @@ void GTStoreStorage::exec() {
 		} else{
 			if (m.type & FORWARD_MASK) {
 				if (m.type & REPLY_MASK)
-					process_forward_reply(m, connfd);
+					process_forward_reply(m);
 				else
-					process_forward_request(m, connfd);
+					process_forward_request(m);
 			} else if (m.type & COOR_MASK) {
 				if (m.type & REPLY_MASK)
-					process_coordinate_reply(m, connfd);
+					process_coordinate_reply(m);
 				else
-					process_coordinate_request(m, connfd);
+					process_coordinate_request(m);
 			} else if (m.type & MANAGE_MASK) {
 				if (m.type & REPLY_MASK)
 					process_manage_reply(m, connfd);
@@ -151,7 +151,7 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	if (sid == id){
 		// Do not forward, reply and then close
 		printf("Contact is coordinatior\n");
-		process_forward_request(m, fd);
+		process_forward_request(m);
 	}
 	else{
 		// Forward message
@@ -162,13 +162,11 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 		}
 		m.owner = __func__;
 		m.send(fwdfd, m.data);
-		printf(">>> Have you received anything?\n");
-		// sleep(1);
 		close(fwdfd);
 	}
 	return false;
 }
-bool GTStoreStorage::process_forward_request(Message& m, int fd) {
+bool GTStoreStorage::process_forward_request(Message& m) {
 	// do as a coordinator. Broadcast R/W requests to pref_list
 	printf("Entered process_forward_request\n");
 	string key;
@@ -223,7 +221,7 @@ bool GTStoreStorage::process_forward_request(Message& m, int fd) {
 }
 
 
-bool GTStoreStorage::process_forward_reply(Message& msg, int fd) {
+bool GTStoreStorage::process_forward_reply(Message& msg) {
 	assert(("no client socket stored", forward_tasks.count(msg.client_id)!=0));
 	printf("Send back to client\n");
 	int clientfd = forward_tasks[msg.client_id];
@@ -235,7 +233,7 @@ bool GTStoreStorage::process_forward_reply(Message& msg, int fd) {
 	return false;
 }
 
-bool GTStoreStorage::process_coordinate_request(Message& m, int fd) {
+bool GTStoreStorage::process_coordinate_request(Message& m) {
 	// Do as coordinator asked to do
 
 	string key;
@@ -246,7 +244,8 @@ bool GTStoreStorage::process_coordinate_request(Message& m, int fd) {
 		write_local(key, data);
 		m.type = MSG_COORDINATE_REPLY | (m.type & WRITE_MASK);
 		m.owner = __func__;
-		m.send(fd);
+		// TODO: fix bug
+		// m.send(fd);
 	} 
 	else {
 		// read
@@ -254,7 +253,8 @@ bool GTStoreStorage::process_coordinate_request(Message& m, int fd) {
 		m.type = MSG_COORDINATE_REPLY | (m.type & WRITE_MASK);
 		m.set_key_data(key, data);
 		m.owner = __func__;
-		m.send(fd, m.data);
+		// TODO: fix bug
+		// m.send(fd, m.data);
 	}
 	return true;
 }
@@ -265,7 +265,7 @@ bool GTStoreStorage::finish_coordination(Message &m, string &key){
 	if (m.node_id == id) {
 		// if itself is the coordinator
 		m.set_key_data(key, working_tasks[m.client_id].second);
-		process_forward_reply(m, -1);
+		process_forward_reply(m);
 	} else {
 		// send back to transferrer
 		m.type = MSG_FORWARD_REPLY | (m.type & WRITE_MASK);
@@ -286,7 +286,7 @@ bool GTStoreStorage::finish_coordination(Message &m, string &key){
 	return 0;
 }
 
-bool GTStoreStorage::process_coordinate_reply(Message& m, int fd) {
+bool GTStoreStorage::process_coordinate_reply(Message& m) {
 	if (working_tasks.count(m.client_id) == 0) {
 		// task is already completed. Ignore redundant result
 		return false;

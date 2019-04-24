@@ -29,7 +29,7 @@ int main() {
     }
     children.push_back(manager_id);
     sleep(1);
-    for (int i=0; i<1; i++){
+    for (int i=0; i<4; i++){
         if ((pid = Fork()) == 0) {
             execve("./storage", NULL, NULL);
             return 0;
@@ -60,8 +60,7 @@ int main() {
         fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
         exit(1);
     }
-
-    waitpid(manager_id, &status, 0);
+    sleep(2);
     _sig_handler(SIGINT);
     return 0;
 }
