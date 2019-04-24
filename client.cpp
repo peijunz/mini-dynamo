@@ -114,7 +114,7 @@ int Message::set(int t, int cid, int nid, int l){
 
 int Message::send(int fd, const char *content){
 	char header[256];
-	// print(owner + " Send");
+	print(owner + " Send");
 
 	sprintf(header, "%d %d %d %d %d %ld\n", type, client_id, node_id, coordinator_id, vid, length);
 	if (rio_writen(fd, header, strlen(header)) == -1){
@@ -147,7 +147,7 @@ int Message::recv(int fd){
 	memcpy(data, buf+offset, n-offset);
 	rio_readn(fd, data+n-offset, length-(n-offset));
 
-	// print(owner + " Received");
+	print(owner + " Received");
 	return 0;
 }
 
@@ -256,7 +256,7 @@ int Message::set_intervals(vector<pair<VirtualNodeID, VirtualNodeID>>& intervals
 		// Serialization
 		length += 1 + sprintf(this->data + length, "%d", intervals.size());
 		for (auto &x:intervals){
-			length += 1 + sprintf(this->data + length, "%d %d", x.first);
+			length += 1 + sprintf(this->data + length, "%d %d", x.first, x.second);
 		}
 		return length;
 }

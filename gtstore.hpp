@@ -67,7 +67,7 @@ typedef enum {
 	MSG_FORWARD_REPLY = FORWARD_MASK | REPLY_MASK,
 	MSG_COORDINATE_REQUEST = COOR_MASK,
 	MSG_COORDINATE_REPLY = COOR_MASK | REPLY_MASK,
-	MSG_DONATE_REQUEST
+	MSG_DONATE_REQUEST = DONATE_MASK
 } message_type_t;
 
 string typestr(int type);
@@ -164,6 +164,9 @@ public:
 	set<StorageNodeID>	storage_nodes;
 	int manage_client_request(Message& m, int fd);
 	int manage_node_request(Message& m, int fd);
+
+	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>>
+	donate_information(vector<VirtualNodeID>&);
 };
 
 class compare {
@@ -204,6 +207,7 @@ public:
 
 	void collect_tokens();
 	void exec();
+	void leave();
 	// Exclusive connection to client/manager
 	bool process_client_request(Message& msg, int fd);
 	bool process_manage_reply(Message& msg, int fd);
