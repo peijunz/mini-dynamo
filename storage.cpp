@@ -374,7 +374,19 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	vector<pair<string, Data>> kvlist;
 	for (int i=0; i<intervals.size(); i++){
 		// Extract kv list
+		auto it = data.upper_bound(intervals[i].first);
+		if (it == data.end()) it = data.begin();
+		if (it != data.end()) {
+			for (auto jt=it->second. begin(); jt != it->second.end(); ) {
+				if (node_table.find_virtual_node(jt->first) == intervals[i].second) {
+					kvlist.push_back(*jt);
+					jt = it->second.erase(jt);
+				}
+			}
+		}
+
 		// Send
+		m.type = MSG_DONATE_REQUEST;
 		m.set_kv_list(kvlist);
 		m.send(bootfd, m.data);
 		kvlist.clear();
