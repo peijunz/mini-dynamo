@@ -3,6 +3,7 @@
 
 #include <string>
 #include <cstdio>
+#include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -41,13 +42,13 @@ public:
 	}
 };
 
-#define ERROR_MASK 1<<8
 #define CLIENT_MASK 1<<0
-#define NODE_MASK 1<<1
+#define FORWARD_MASK 1<<1
 #define COOR_MASK 1<<2
 #define MANAGER_MASK 1<<3
 #define WRITE_MASK 1<<4
 #define REPLY_MASK 1<<5
+#define ERROR_MASK 1<<8
 
 
 
@@ -59,11 +60,11 @@ typedef int ClientID;
 typedef enum {
 	MSG_CLIENT_REQUEST = CLIENT_MASK,
 	MSG_CLIENT_REPLY = CLIENT_MASK | REPLY_MASK,
-	MSG_NODE_REQUEST = NODE_MASK,
-	MSG_MANAGER_REPLY = MANAGER_MASK | REPLY_MASK,
-	MSG_NODE_REPLY = NODE_MASK | REPLY_MASK,
-	MSG_COORDINATOR_REQUEST = COOR_MASK,
-	MSG_COORDINATOR_REPLY = COOR_MASK | REPLY_MASK,
+	MSG_MANAGE_REPLY = MANAGER_MASK | REPLY_MASK,
+	MSG_FORWARD_REQUEST = FORWARD_MASK,
+	MSG_FORWARD_REPLY = FORWARD_MASK | REPLY_MASK,
+	MSG_COORDINATE_REQUEST = COOR_MASK,
+	MSG_COORDINATE_REPLY = COOR_MASK | REPLY_MASK,
 } message_type_t;
 
 int openfd(const char *addr);
@@ -72,6 +73,7 @@ ssize_t rio_readn(int fd, char* buf, size_t n);
 int read_line(int fd, char* buf, size_t n, int *loc);
 
 struct Message {
+	string owner="";
 	int type;
 	ClientID client_id;
 	StorageNodeID node_id;
@@ -92,14 +94,18 @@ struct Message {
 
 
 class GTStoreClient {
+private:
+	int get_contact_node(int id);
+	int connect_contact_node();
+	int node_id; // Major contact node for this client
 public:
 	int client_id;
-	int node_id; // Major contact node for this client
 	val_t value;
 	void init(int id);
 	void finalize();
 	val_t get(string key);
 	bool put(string key, string value);
+
 };
 
 
@@ -170,18 +176,18 @@ public:
 	
 
 	// coordinator functions
-	bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
-	bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
+	// bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
+	// bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
 
 
 	void exec();
 
 	bool process_client_request(Message& msg, int fd);
-	bool process_node_request(Message& msg, int fd);
-	bool process_node_reply(Message& msg, int fd);
-	bool process_coordinator_request(Message& msg, int fd);
-	bool process_coordinator_reply(Message& msg, int fd);
-	bool process_manager_reply(Message& msg, int fd);
+	bool process_forward_request(Message& msg, int fd);
+	bool process_forward_reply(Message& msg, int fd);
+	bool process_coordinate_request(Message& msg, int fd);
+	bool process_coordinate_reply(Message& msg, int fd);
+	bool process_manage_reply(Message& msg, int fd);
 };
 
 #endif

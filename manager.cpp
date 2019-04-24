@@ -38,6 +38,7 @@ int GTStoreManager::manage_client_request(Message &m, int fd){
 		m.node_id = cur_contact;
 	}
 	m.length = 0;
+		m.owner = __func__;
 	m.send(fd);
 	printf("Sent contact for client\n");
 	return 0;
@@ -54,7 +55,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	vector<VirtualNodeID> vvid = {};
 	node_table.add_storage_node(num_new_vnodes, sid, vvid);
 
-	m.type = MSG_MANAGER_REPLY;
+	m.type = MSG_MANAGE_REPLY;
 	m.node_id = sid;
 	storage_nodes.insert(sid);
 
@@ -66,15 +67,17 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	sprintf(m.data, "%d", num_vnodes);
 	int i = 0;
 	for (auto& p : node_table.storage_nodes) {
-		sprintf(m.data + 16 + i * 32, "%d", p.first);
-		sprintf(m.data + 32 + i * 32, "%d", p.second);
+		sprintf(m.data + 16 + i * 32, "%d %d", p.first, p.second);
 		i ++;
 	}
+		m.owner = __func__;
 	m.send(fd, m.data);
+	m.recv(fd);
 	close(fd);
 
 	// broadcast to old nodes
 	if (m.data) delete[] m.data;
+	m.type = MSG_MANAGE_REPLY;
 	m.length = (1 + num_new_vnodes) * 16;
 	m.data = new char[m.length];
 	sprintf(m.data, "%d", num_new_vnodes);
@@ -84,6 +87,9 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
 		if (nodeid == sid) continue;
 		fd = openfd(storage_node_addr(nodeid).data());
+		if (fd<0){
+			perror("wrong fd\n");
+		}
 		m.send(fd, m.data);
 		close(fd);
 	}
@@ -106,7 +112,7 @@ void GTStoreManager::exec(){
 		m.print();
 		if (m.type & CLIENT_MASK) {
 			manage_client_request(m, connfd);
-		} else if (m.type & NODE_MASK) {
+		} else if (m.type & FORWARD_MASK) {
 			manage_node_request(m, connfd);
 		}
 		close(connfd);

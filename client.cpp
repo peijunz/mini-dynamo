@@ -92,9 +92,25 @@ int Message::set(int t, int cid, int nid, int l){
 int Message::send(int fd, const char *content){
 	char header[256];
 	sprintf(header, "%d %d %d %ld\n", type, client_id, node_id, length);
-	rio_writen(fd, header, strlen(header));
-	if (content)
-		rio_writen(fd, content, length);
+	printf("%s to send header: %d %d %d %ld\n", owner.c_str(), type, client_id, node_id, length);
+	if (rio_writen(fd, header, strlen(header)) == -1){
+		printf("Write error\n");
+		exit(-1);
+	}
+	if (content){
+		if (rio_writen(fd, content, length) == -1){
+			printf("Write error\n");
+			exit(-1);
+		}
+		char*buf=new char[length+1];
+		buf[length] = 0;
+		memcpy(buf, content, length);
+		for(char*p=buf; p<buf + length; p++){
+			if (*p==0) *p='_';
+		}
+		printf("%s Sent: %.*s\n", owner.c_str(), length, buf);
+		delete[] buf;
+	}
 	return 0;
 }
 
@@ -109,6 +125,7 @@ int Message::recv(int fd){
 		exit(-1);
 	}
 	sscanf(buf, "%d %d %d %ld\n", &type, &client_id, &node_id, &length);
+
 	// if (length>0){
 	data = new char[length+1];
 	data[length] = 0;
@@ -133,7 +150,7 @@ void Message::print(){
 int Message::set_key_data(string key, Data data) {
 	if (key.size() > MAX_KEY_LENGTH)
 		return -1;
-	length = MAX_KEY_LENGTH+1 + 64 + data.get_length();
+	length = MAX_KEY_LENGTH+1 + data.get_length();
 	if (this->data) delete[] this->data;
 	this->data = new char[length];
 	snprintf(this->data, MAX_KEY_LENGTH+1, "%s", key.data());
@@ -233,25 +250,40 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 
 
 ////////////////////////////////////////////////////
-void GTStoreClient::init(int id) {
-	
-	cout << "Inside GTStoreClient::init() for client " << id << "\n";
-	client_id = id;
-	char buf[32];
+int GTStoreClient::get_contact_node(int id) {
     int fd = openfd(manager_addr);
     if (fd < 0){
         printf("error in clientfd\n");
         exit(-1);
     }
-    Message msg(MSG_CLIENT_REQUEST, client_id, -1, 0);
-    msg.send(fd);
-    msg.recv(fd);
+    Message m(MSG_CLIENT_REQUEST, id, -1, 0);
+		m.owner = __func__;
+    m.send(fd);
+    m.recv(fd);
 	close(fd);
-	if (msg.type & ERROR_MASK){
+	if (m.type & ERROR_MASK){
 		printf("No available node\n");
 		//exit(1);
 	}
-	node_id = msg.node_id;
+	return m.node_id;
+}
+
+int GTStoreClient::connect_contact_node(){
+	int fd = -1;
+	// for (int i=0; i<4; i++){
+		fd = openfd(storage_node_addr(node_id).c_str());
+		if (fd > 0) return fd;
+		// node_id = get_contact_node(client_id);
+	// }
+	printf("error in clientfd\n");
+	exit(-1);
+}
+
+void GTStoreClient::init(int id) {
+	
+	cout << "Inside GTStoreClient::init() for client " << id << "\n";
+	client_id = id;
+	node_id = get_contact_node(client_id);
 	printf("Got contact %d\n", node_id);
 }
 
@@ -261,21 +293,16 @@ val_t GTStoreClient::get(string key) {
 	
 	// send message to contact node
 	Data data;
-	Message msg(MSG_CLIENT_REQUEST, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
-	msg.data = new char[msg.length];
-	msg.set_key_data(key, data);
-	string nodeaddr = node_addr + "_" + to_string(node_id);
-	int fd = openfd(nodeaddr.c_str());
-    if (fd < 0){
-        printf("error in clientfd\n");
-        exit(-1);
-    }
-	msg.send(fd, msg.data);
+	Message m(MSG_CLIENT_REQUEST, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
+	m.data = new char[m.length];
+	m.set_key_data(key, data);
+	int fd = connect_contact_node();
+		m.owner = __func__;
+	m.send(fd, m.data);
 
 	// receive data
-	msg.recv(fd);
-
-
+	m.recv(fd);
+	m.get_key_data(key, data);
 	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << "\n";
 	val_t value;
 	// Get the value!
@@ -288,11 +315,29 @@ bool GTStoreClient::put(string key, string value) {
 	// Attempt to find its contact
 	// If failed, then ask manager for a new contact
 
-	string print_value = "";
-	for (uint i = 0; i < value.size(); i++) {
-		print_value += value[i] + " ";
-	}
-	cout << "Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << print_value << "\n";
+	// string print_value = "";
+	// for (uint i = 0; i < value.size(); i++) {
+	// 	print_value += value[i] + " ";
+	// }
+	Data data;
+	data.value = value;
+	Message m(MSG_CLIENT_REQUEST, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
+	m.data = new char[m.length];
+	m.set_key_data(key, data);
+	int fd = connect_contact_node();
+		m.owner = __func__;
+	m.send(fd, m.data);
+
+	// receive data
+	m.recv(fd);
+	close(fd);
+	assert(("not a reply for client", m.type & MSG_CLIENT_REPLY));
+	cout << "Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << value << "\n";
+	//// Test
+	// string key;
+	m.get_key_data(key, data);
+	cout << "Inside GTStoreClient::put() for reply: " << client_id << " key: " << key << " value: " << value << "\n";
+	///////
 	// Put the value!
 	return true;
 }
