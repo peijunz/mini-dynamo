@@ -6,7 +6,7 @@ vector<int> children;
 static void _sig_handler(int signo) {
     if(signo == SIGINT || signo == SIGTERM) {
         for(int pid:children){
-            kill(pid, SIGINT);
+            kill(pid, SIGTERM);
         }
     }
 }
@@ -24,22 +24,28 @@ int main() {
     int manager_id, pid;
     if ((manager_id = Fork()) == 0) {
         unlink(manager_addr);
+        printf("========================\n");
+        printf("=== Starting Manager with (N=%d, R=%d, W=%d, V=%d)\n",\
+                CONFIG_N, CONFIG_R, CONFIG_W, CONFIG_V);
         execve("./manager", NULL, NULL);
-        return 0; 
+        return 0;
     }
     children.push_back(manager_id);
     sleep(1);
     for (int i=0; i<4; i++){
         if ((pid = Fork()) == 0) {
+            printf("========================\n");
+            printf("=== Starting Storage Node %d...\n", i);
             execve("./storage", NULL, NULL);
             return 0;
         }
         children.push_back(pid);
     }
     sleep(1);
-    fprintf(stderr, "===============================\n");
-    for (int i=0; i<1; i++){
+    for (int i=0; i<4; i++){
         if ((pid = Fork()) == 0) {
+            printf("========================\n");
+            printf("=== Running Client %d...\n", i);
             char key[32], val[32];
             GTStoreClient client;
             client.init(i);

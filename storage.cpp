@@ -13,9 +13,8 @@ void GTStoreStorage::init(int num_vnodes) {
         exit(-1);
     }
     Message m(MSG_FORWARD_REQUEST, -1, -1, 0);
-	m.length = 64;
 	m.data = new char[m.length];
-	sprintf(m.data, "%d", num_vnodes);
+	m.length = sprintf(m.data, "%d", num_vnodes);
 	m.owner = "GTStoreStorage::init";
     m.send(fd, m.data);
 
@@ -30,11 +29,14 @@ void GTStoreStorage::init(int num_vnodes) {
 		exit(-1);
 	}
 	id = m.node_id;
-	sscanf(m.data, "%d", &num_vnodes);
+	char *cur = m.data;
+	sscanf(cur, "%d", &num_vnodes);
+	cur += strnlen(cur, 24)+1;
 	VirtualNodeID vid;
 	StorageNodeID sid;
 	for (int i=0; i<num_vnodes; i++) {
-		sscanf(m.data + 16 + i * 32, "%d %d", &vid, &sid);
+		sscanf(cur, "%d %d", &vid, &sid);
+		cur += strnlen(cur, 24)+1;
 		node_table.add_virtual_node(vid);
 		node_table.storage_nodes.insert({vid, sid});
 		printf ("{%d, %d}\t", vid, sid);
@@ -114,10 +116,8 @@ void GTStoreStorage::exec() {
         	perror("Accept fail");
 		}
 		Message m;
+		m.owner = __func__;
 		m.recv(connfd);
-
-		printf("%s Received mtype: %d\n", __func__, m.type);
-		m.print();
 		if (m.type & CLIENT_MASK) {
 			// Because client does not listen, we do not
 			// close client until we got a reply at process_forward_reply
@@ -154,11 +154,10 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	char *val = m.data + offset;
 	StorageNodeID sid = find_coordinator(m.data);
 	forward_tasks[m.client_id] = fd;
-	printf("SIZE of forward tasks for node %d is %d\n", id, forward_tasks.size());
 
 	if (sid == id){
 		// Do not forward, reply and then close
-		printf("Contact is coordinatior\n");
+		// printf("\tContact is coordinatior\n");
 		process_forward_request(m);
 	}
 	else{
@@ -176,7 +175,7 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 }
 bool GTStoreStorage::process_forward_request(Message& m) {
 	// do as a coordinator. Broadcast R/W requests to pref_list
-	printf("Entered process_forward_request\n");
+	printf(">>> Entered process_forward_request\n");
 	string key;
 	Data data;
 	m.get_key_data(key, data);
@@ -190,21 +189,19 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 	if (m.type & WRITE_MASK) {
 		// write
 		write_local(key, data);
-		printf("Write data %s\n", data.value.data());
+		printf("\tWrite data %s\n", data.value.data());
 	} else {
 		// read
 		read_local(key, data);
-		printf("Read data %s\n", data.value.data());
+		printf("\tRead data %s\n", data.value.data());
 	}
-	printf("process_forward_request todo=%d\n", working_tasks[m.client_id].first);
 	working_tasks[m.client_id].first++;
-	printf("process_forward_request with todo=%d\n", working_tasks[m.client_id].first);
 	working_tasks[m.client_id].second = data;
 
 	// ask other nodes to complete their work
 	m.coordinator_id = id;
 	for (auto& pref : pref_list) {
-		printf("Broadcast with proxy node_id...\n");
+		printf("\tBroadcast with proxy node_id...\n");
 		m.type = MSG_COORDINATE_REQUEST | (m.type & WRITE_MASK);
 		string coordinator_addr = node_addr + "_" + to_string(pref.second);
 		int nodefd = openfd(coordinator_addr.data());
@@ -220,18 +217,18 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
 		finish_coordination(m, key);
-		printf("No need to broadcast\n");
+		printf("\tNo need to broadcast\n");
 	}
 
 	// printf("SIZE of working tasks for node %d is %d\n", id, working_tasks.size());
-	printf("Exited process_forward_request with todo=%d\n", working_tasks[m.client_id].first);
+	printf("<<< Exited process_forward_request with todo=%d\n", working_tasks[m.client_id].first);
 	return false;
 }
 
 
 bool GTStoreStorage::process_forward_reply(Message& msg) {
 	assert(("no client socket stored", forward_tasks.count(msg.client_id)!=0));
-	printf("Send back to client\n");
+	printf(">>> Send back to client\n");
 	int clientfd = forward_tasks[msg.client_id];
 	msg.type = MSG_CLIENT_REPLY;
 	msg.owner = __func__;
@@ -274,14 +271,14 @@ bool GTStoreStorage::process_coordinate_request(Message& m) {
 
 bool GTStoreStorage::finish_coordination(Message &m, string &key){
 	// task completed. 
-	printf("Entering %s\n", __func__);
+	printf(">>> Entering %s\n", __func__);
 	if (m.node_id == id) {
-		printf("itself is the coordinator\n");
+		printf("\titself is the coordinator\n");
 		m.set_key_data(key, working_tasks[m.client_id].second);
-		printf("SIZE of forward tasks for node %d is %d\n", id, forward_tasks.size());
+		printf("\tSIZE of forward tasks for node %d is %d\n", id, forward_tasks.size());
 		process_forward_reply(m);
 	} else {
-		printf("send back to transferrer\n");
+		printf("\tsend back to transferrer\n");
 		m.type = MSG_FORWARD_REPLY | (m.type & WRITE_MASK);
 		m.set_key_data(key, working_tasks[m.client_id].second);
 		string transferrer_addr = node_addr + "_" + to_string(m.node_id);
@@ -301,10 +298,10 @@ bool GTStoreStorage::finish_coordination(Message &m, string &key){
 }
 
 bool GTStoreStorage::process_coordinate_reply(Message& m) {
-	// printf("SIZE of working tasks for node %d is %d\n", id, working_tasks.size());
+	printf(">>> GTStoreStorage::process_coordinate_reply: Entering\n");
 	if (working_tasks.count(m.client_id) == 0) {
 		// task is already completed. Ignore redundant result
-		printf(">>> Exiting %s\n", __func__);
+		printf("<<< Exiting %s\n", __func__);
 		return false;
 	}
 
@@ -321,32 +318,34 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 		working_tasks[m.client_id].second = data;
 	}
 
-
-	printf(">>> done task %d\n", working_tasks[m.client_id].first);
-	if (working_tasks[m.client_id].first >= 
-		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
+	int target = (m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R;
+	printf("\tDone task %d/%d\n", working_tasks[m.client_id].first, target);
+	if (working_tasks[m.client_id].first >= target)
 	{
 		finish_coordination(m, key);
 	}
 
-	printf("Exiting 2 %s\n", __func__);
 	return false;
 }
 
 bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
 	// a new node with id==m.node_id joins
+	printf(">>> GTStoreStorage::process_manage_reply: Entering");
 	int num_vnodes;
-	sscanf(m.data, "%d", &num_vnodes);
+	char*cur=m.data;
+	sscanf(cur, "%d", &num_vnodes);
+	cur += strnlen(cur, 24)+1;
 	vector<VirtualNodeID> vvid(num_vnodes);
-	printf ("%d join, %d vnodes\n", m.node_id, num_vnodes);
-	printf ("%.*s\n", m.length, m.data);
+	printf ("\t%d join, %d vnodes\n", m.node_id, num_vnodes);
+	printf ("\t%.*s\n", m.length, m.data);
 	for (int i=0; i<num_vnodes; i++) {
-		sscanf(m.data + 16*(i+1), "%d", &vvid[i]);
+		sscanf(cur, "%d", &vvid[i]);
+		cur += strnlen(cur, 24)+1;
 	}
 	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
 
-	printf ("Successfully add to manager!  Node ID = %d\n", id);
+	printf ("<<< Successfully add to manager!  Node ID = %d\n", id);
 	close(fd);
 
 	return true;

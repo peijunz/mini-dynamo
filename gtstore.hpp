@@ -22,9 +22,9 @@ using namespace std;
 typedef vector<string> val_t;
 
 #define CONFIG_V	3
-#define CONFIG_N	2
-#define CONFIG_R	2
-#define CONFIG_W	2
+#define CONFIG_N	5
+#define CONFIG_R	3
+#define CONFIG_W	3
 
 #define MAX_ID_LENGTH	32
 #define MAX_KEY_LENGTH	20
@@ -68,6 +68,7 @@ typedef enum {
 	MSG_COORDINATE_REPLY = COOR_MASK | REPLY_MASK,
 } message_type_t;
 
+string typestr(int type);
 int openfd(const char *addr);
 ssize_t rio_writen(int fd, const char* buf, size_t n);
 ssize_t rio_readn(int fd, char* buf, size_t n);
@@ -87,7 +88,7 @@ struct Message {
 	Message(){}
 	Message(int t, int cid, int nid, int l){set(t, cid, nid, l);}
 	~Message();
-	void print();
+	void print(string);
 
 	int set_key_data(string key, Data data);
 	int get_key_data(string& key, Data& data);
