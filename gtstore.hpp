@@ -22,9 +22,9 @@ using namespace std;
 typedef vector<string> val_t;
 
 #define CONFIG_V	3
-#define CONFIG_N	1
+#define CONFIG_N	3
 #define CONFIG_R	1
-#define CONFIG_W	1
+#define CONFIG_W	2
 
 #define MAX_ID_LENGTH	32
 #define MAX_KEY_LENGTH	20
