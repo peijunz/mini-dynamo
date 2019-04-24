@@ -64,7 +64,6 @@ int read_line(int fd, char* buf, size_t n, int *loc) {
 				nread = 0;
 			else{
 				perror("read fail");
-				printf("Cache: %.*s\n", n-rem, buf-(n-rem));
 				return -1;
 			}
 		} else if(nread == 0)
@@ -74,7 +73,6 @@ int read_line(int fd, char* buf, size_t n, int *loc) {
 		for (char *p=buf-nread; p < buf; p++){
 			if (*p=='\n'){
 				*loc = n-rem-(buf-p)+1;
-				// printf(">>> remain %10s\n", p+1);
 				return (ssize_t)(n - rem);
 			}
 		}
@@ -82,6 +80,25 @@ int read_line(int fd, char* buf, size_t n, int *loc) {
 	return (ssize_t)(n - rem);
 }
 
+
+string typestr(int type){
+	string s="T";
+	if (type & CLIENT_MASK)
+		s += "_CLI";
+	if (type & FORWARD_MASK)
+		s += "_FWD";
+	if (type & COOR_MASK)
+		s += "_COO";
+	if (type & MANAGE_MASK)
+		s += "_MNG";
+	if (type & WRITE_MASK)
+		s += "_WR";
+	if (type & REPLY_MASK)
+		s += "_REP";
+	if (type & ERROR_MASK)
+		s += "_ERR";
+	return s;
+}
 //////////////////  Message Send/Recv  //////////////////////
 
 
@@ -95,8 +112,9 @@ int Message::set(int t, int cid, int nid, int l){
 
 int Message::send(int fd, const char *content){
 	char header[256];
-	sprintf(header, "%d %d %d %ld\n", type, client_id, node_id, length);
-	printf("%s to send header: %d %d %d %ld\n", owner.c_str(), type, client_id, node_id, length);
+	// print(owner + " Send");
+
+	sprintf(header, "%d %d %d %d %ld\n", type, client_id, node_id, coordinator_id, length);
 	if (rio_writen(fd, header, strlen(header)) == -1){
 		printf("Write error\n");
 		exit(-1);
@@ -107,14 +125,6 @@ int Message::send(int fd, const char *content){
 			printf("Write error\n");
 			exit(-1);
 		}
-		char*buf=new char[length+1];
-		buf[length] = 0;
-		memcpy(buf, content, length);
-		for(char*p=buf; p<buf + length; p++){
-			if (*p==0) *p='_';
-		}
-		printf("%s Sent: %.*s\n", owner.c_str(), length, buf);
-		delete[] buf;
 	}
 	return 0;
 }
@@ -129,15 +139,13 @@ int Message::recv(int fd){
 		fprintf(stderr, "Failed in reading message\n");
 		exit(-1);
 	}
-	sscanf(buf, "%d %d %d %ld\n", &type, &client_id, &node_id, &length);
-
-	// if (length>0){
+	sscanf(buf, "%d %d %d %d %ld\n", &type, &client_id, &node_id, &coordinator_id, &length);
 	data = new char[length+1];
 	data[length] = 0;
-	// printf(">>> At offset %d remain %10s\n", offset, buf+offset);
 	memcpy(data, buf+offset, n-offset);
 	rio_readn(fd, data+n-offset, length-(n-offset));
-	// }
+
+	// print(owner + " Received");
 	return 0;
 }
 
@@ -146,41 +154,42 @@ Message::~Message(){
 		delete[] data;
 }
 
-void Message::print(){
-
-	printf("Message Header: %d %d %d %ld\n", type, client_id, node_id, length);
+void Message::print(string info){
+	printf("\t%s: %d(%s) %d %d %ld\n", info.data(), type, typestr(type).data(), client_id, node_id, length);
 	if (length && data){
 		char*buf=new char[length+1];
 		buf[length] = 0;
 		memcpy(buf, data, length);
 		for(char*p=buf; p<buf + length; p++){
-			if (*p==0) *p='_';
+			if (*p==0) *p='\t';
 		}
-		printf("%.*s\n\n", (int)length, buf);
+		printf("\tContent: %.*s\n\n", (int)length, buf);
 		delete[] buf;
 	}
 };
 
 int Message::set_key_data(string key, Data data) {
-	// printf("Set key val: key %s, val %s\n", key.c_str(), data.value.c_str());
 	if (key.size() > MAX_KEY_LENGTH)
 		return -1;
-	length = MAX_KEY_LENGTH+1 + data.get_length();
 	if (this->data) delete[] this->data;
-	this->data = new char[length];
-	strncpy(this->data, key.data(), MAX_KEY_LENGTH+1);
-	sprintf(this->data + MAX_KEY_LENGTH+1, "%lld", data.version);
-	strncpy(this->data + MAX_KEY_LENGTH + 1 + 64 + 1, data.value.data(), data.value.size()+1);
+	this->data = new char[MAX_KEY_LENGTH+1 + data.get_length()];
+	char*cur=this->data;
+	length = 0;
+	strcpy(this->data, key.data());
+	length = key.size()+1;
+	length += 1 + sprintf(this->data + length, "%lld", data.version);
+	strcpy(this->data + length, data.value.data());
+	length += 1+data.value.size();
 	return 0;
 }
 int Message::get_key_data(string& key, Data& data) {
-	printf("Entered get kv\n");
-	// char buf[MAX_KEY_LENGTH+1];
-	// buf[MAX_KEY_LENGTH] = 0;
-	key = this->data;
-	sscanf(this->data + MAX_KEY_LENGTH+1, "%lld", &data.version);
-	data.value = this->data + MAX_KEY_LENGTH + 1 + 64 + 1;
-	printf("%s Get L=%d key val: key %s, val %s\n", owner.c_str(), length, this->data, this->data + MAX_KEY_LENGTH + 1 + 64 + 1);
+	char*cur=this->data;
+	key = cur;
+	cur += 1+strlen(cur);
+	sscanf(cur, "%lld", &data.version);
+	cur += 1+strlen(cur);
+	data.value = cur;
+	// printf("Received %s %lld %s\n", key.data(), data.version, data.value.data());
 	return 0;
 }
 
@@ -205,18 +214,18 @@ void NodeTable::add_virtual_node(VirtualNodeID vid) {
 }
 
 void NodeTable::add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid) {
+	printf(">>> %s\n", __func__);
 	if (sid == -1) {
 		sid = num_storage_nodes ++;
 		vvid.clear();
 		for (int i=0; i<num_vnodes; i++)
 			vvid.push_back(num_virtual_nodes ++);
 	}
-	printf ("sid=%d\n", sid);
+	printf ("\tsid=%d\n", sid);
 	for (VirtualNodeID vid : vvid) {
 		add_virtual_node(vid);
 		storage_nodes.insert({vid, sid});
 	}
-	printf ("\n");
 }
 
 
@@ -302,10 +311,10 @@ int GTStoreClient::connect_contact_node(){
 
 void GTStoreClient::init(int id) {
 	
-	cout << "Inside GTStoreClient::init() for client " << id << "\n";
+	cout << ">>> GTStoreClient::init() Entering " << id << "\n";
 	client_id = id;
 	node_id = get_contact_node(client_id);
-	printf("Got contact %d\n", node_id);
+	printf("\tGTStoreClient::init: Got contact %d\n", node_id);
 }
 
 val_t GTStoreClient::get(string key) {
@@ -328,7 +337,7 @@ val_t GTStoreClient::get(string key) {
 	fprintf(stderr, "---------------Client receive---------------------\n");
 	m.print();
 	m.get_key_data(key, data);
-	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << " value: "<<data.value<< "\n";
+	cout << ">>> Inside GTStoreClient::get() for client: " << client_id << " key: " << key << " value: "<<data.value<< "\n";
 	val_t value;
 	// Get the value!
 	
@@ -364,11 +373,11 @@ bool GTStoreClient::put(string key, string value) {
 
 	close(fd);
 	assert(m.type==MSG_CLIENT_REPLY);
-	cout << "Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << value << "\n";
+	cout << ">>> Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << value << "\n";
 	//// Test
 	// string key;
 	m.get_key_data(key, data);
-	cout << "Inside GTStoreClient::put() for reply: " << client_id << " key: " << key << " value: " << value << "\n";
+	cout << ">>> Inside GTStoreClient::put() for reply: " << client_id << " key: " << key << " value: " << value << "\n";
 	///////
 	// Put the value!
 	return true;
@@ -376,5 +385,5 @@ bool GTStoreClient::put(string key, string value) {
 
 void GTStoreClient::finalize() {
 	
-	cout << "Inside GTStoreClient::finalize() for client " << client_id << "\n";
+	cout << ">>> Inside GTStoreClient::finalize() for client " << client_id << "\n";
 }

@@ -2,6 +2,7 @@
 
 
 void GTStoreManager::init() {
+	cout << ">>> GTStoreManager::init()\n";
 	int size;
 	struct sockaddr_un un;
 	un.sun_family = AF_UNIX;
@@ -19,13 +20,11 @@ void GTStoreManager::init() {
 		perror("listen failed");
 		exit(1);
 	}
-	cout << "GTStoreManager::init() Done\n";
+	cout << "<<< GTStoreManager::init() Done\n";
 }
 
 int GTStoreManager::manage_client_request(Message &m, int fd){
-	printf("Manager connected to some client\n");
-
-	printf("Got request from client\n");
+	printf(">>> %s: Entering\n", __func__);
 	if (!storage_nodes.size()){
 		m.type |= ERROR_MASK;
 		m.node_id = 0;
@@ -38,19 +37,17 @@ int GTStoreManager::manage_client_request(Message &m, int fd){
 		m.node_id = cur_contact;
 	}
 	m.length = 0;
-		m.owner = __func__;
+	m.owner = __func__;
 	m.send(fd);
-	printf("Sent contact for client\n");
+	printf("<<< %s: Exiting\n", __func__);
 	return 0;
 }
 
 int GTStoreManager::manage_node_request(Message &m, int fd){
 	// Manage entrance and exit status of nodes
-	printf("Manager connected to some node\n");
-
-	printf("");
 	int num_new_vnodes;
 	sscanf(m.data, "%d", &num_new_vnodes);
+	printf(">>> %s: Entering with %d requested vnodes\n", __func__, num_new_vnodes);
 	int sid = -1;
 	vector<VirtualNodeID> vvid = {};
 	node_table.add_storage_node(num_new_vnodes, sid, vvid);
@@ -62,27 +59,25 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	// copy to new node
 	if (m.data) delete[] m.data;
 	int num_vnodes = node_table.storage_nodes.size();
-	m.length = 16 + 32 * num_vnodes;
-	m.data = new char[m.length];
-	sprintf(m.data, "%d", num_vnodes);
-	int i = 0;
+	m.data = new char[16 + 32 * num_vnodes];
+	m.length = 1+sprintf(m.data, "%d", num_vnodes);
 	for (auto& p : node_table.storage_nodes) {
-		sprintf(m.data + 16 + i * 32, "%d %d", p.first, p.second);
-		i ++;
+		m.length += 1+sprintf(m.data + m.length, "%d %d", p.first, p.second);
 	}
-		m.owner = __func__;
+	m.owner = __func__;
 	m.send(fd, m.data);
 	m.recv(fd);
 	close(fd);
 
 	// broadcast to old nodes
+	printf("\t%s: Broadcast to storage nodes %s\n", __func__);
+
 	if (m.data) delete[] m.data;
 	m.type = MSG_MANAGE_REPLY;
-	m.length = (1 + num_new_vnodes) * 16;
-	m.data = new char[m.length];
-	sprintf(m.data, "%d", num_new_vnodes);
+	m.data = new char[(1 + num_new_vnodes) * 16];
+	m.length = 1+sprintf(m.data, "%d", num_new_vnodes);
 	for (int i=0; i<num_new_vnodes; i++) {
-		sprintf(m.data + 16*(i+1), "%d", vvid[i]);
+		m.length += 1+sprintf(m.data + m.length, "%d", vvid[i]);
 	}
 	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
 		if (nodeid == sid) continue;
@@ -95,8 +90,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	}
 
 	if (m.data) delete[] m.data;
-	printf ("Add a new node\n");
-
+	printf("<<< %s: Exiting\n", __func__);
 	return 0;
 }
 
@@ -109,7 +103,6 @@ void GTStoreManager::exec(){
 		}
 		Message m;
 		m.recv(connfd);
-		m.print();
 		if (m.type & CLIENT_MASK) {
 			manage_client_request(m, connfd);
 		} else if (m.type & FORWARD_MASK) {
