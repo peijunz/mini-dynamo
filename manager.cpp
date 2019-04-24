@@ -48,6 +48,7 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 	// compute donate information
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>> >	donate_info;
 	for (VirtualNodeID vid : vvid) {
+		fprintf(stderr, "\tcomputing.......%u\n", vid);
 		// head: k previous
 		auto& vnodes = node_table.virtual_nodes;
 		auto& snodes = node_table.storage_nodes;
@@ -71,6 +72,8 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			count[snodes[jt->second]] ++;
 		}
 		
+		fprintf(stderr, "\t\tset head and tail\n");
+
 		while (it != new_node) {
 			VirtualNodeID vid_start = it->second;
 
@@ -84,6 +87,7 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			StorageNodeID sid_donate = snodes[jt->second];
 
 			donate_info[sid_donate].push_back({vid_start, vid_end});
+			fprintf(stderr, "\t\t||||----Donate: %d, [%d, %d)----||||\n", sid_donate, vid_start, vid_end);
 
 			while (count.size() < CONFIG_N+1) {
 				jt ++;
@@ -96,6 +100,7 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 	printf("<<< %s: Exiting\n", __func__);
 	return donate_info;
 }
+
 int GTStoreManager::manage_node_request(Message &m, int fd){
 	// Manage entrance and exit status of nodes
 	int num_new_vnodes;
@@ -129,9 +134,9 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 		donate_info = donate_information(vvid);
 	}
 	// broadcast to old nodes
-	printf("\t%s: Broadcast to storage nodes %s\n", __func__);
+	fprintf(stderr, "\t%s: Broadcast to storage nodes\n", __func__);
 
-	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
+	for (StorageNodeID nodeid = 0; nodeid < node_table.nodes.size(); nodeid ++) {
 
 		if (m.data) delete[] m.data;
 		m.type = MSG_MANAGE_REPLY;
@@ -155,7 +160,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	}
 
 	if (m.data) delete[] m.data;
-	printf("<<< %s: Exiting\n", __func__);
+	fprintf(stderr, "<<< %s: Exiting\n", __func__);
 
 
 	m.recv(fd);

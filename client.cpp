@@ -118,16 +118,18 @@ int Message::send(int fd, const char *content){
 
 	sprintf(header, "%d %d %d %d %d %ld\n", type, client_id, node_id, coordinator_id, vid, length);
 	if (rio_writen(fd, header, strlen(header)) == -1){
-		printf("Write error\n");
+		perror("Write error\n");
 		exit(-1);
 	}
 	assert((length>0) ^ (content==NULL));
+	fprintf(stderr, "start to send message.....\n");
 	if (content){
 		if (rio_writen(fd, content, length) != length){
 			printf("Write error\n");
 			exit(-1);
 		}
 	}
+	fprintf(stderr, "start to send message..... success\n");	
 	return 0;
 }
 
@@ -268,7 +270,7 @@ vector<pair<VirtualNodeID, VirtualNodeID>> Message::get_intervals(){
 	sscanf(cur, "%d", &n);
 	cur += 1+strlen(cur);
 
-	for (int i=0; i<n; i++){
+	for (int r=0; r<n; r++){
 		sscanf(cur, "%d %d", &i, &j);
 		cur += 1+strlen(cur);
 		intervals.push_back({i, j});

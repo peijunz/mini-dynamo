@@ -51,7 +51,7 @@ void GTStoreStorage::init(int num_vnodes) {
 	}
 	printf("\n");
 
-	printf ("Successfully add to manager!  Node ID = %d\n", id);
+	printf ("Successfully add self to manager!  Node ID = %d\n", id);
 
 	int size;
 	struct sockaddr_un un;
@@ -85,6 +85,7 @@ void GTStoreStorage::init(int num_vnodes) {
     m.length = 0;
 	// m.node_id = -2;
 	m.send(fd);
+	fprintf(stderr, "\t----ACK sent----\n");
 	close(fd);
 }
 
@@ -393,6 +394,7 @@ bool GTStoreStorage::process_donate_request(Message& m) {
 
 bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
+	m.owner = __func__;
 	// a new node with id==m.node_id joins
 	printf(">>> GTStoreStorage::process_manage_reply: Entering");
 	m.owner = to_string(id) + __func__;
@@ -411,28 +413,45 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	}
 	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
 
-
 	if (node_table.nodes.size() > CONFIG_N){
 		m.recv(fd);
 		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
+		fprintf(stderr, "\t\t%d\n", intervals.size());
+
 		int bootfd = openfd(storage_node_addr(m.node_id).data());
 		if (bootfd < 0){
 			perror("ERROR: connect boot fail");
 			exit(1);
 		}
-		// TODO
 		m.type = MSG_DONATE_REQUEST;
 		m.send(bootfd, m.data);
+		m.print("\t[[[  Donate  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 		vector<pair<string, Data>> kvlist;
+
 		for (int i=0; i<intervals.size(); i++){
 			// Extract kv list
+			auto it = data.upper_bound(intervals[i].first);
+			if (it == data.end()) it = data.begin();
+			if (it != data.end()) {
+				for (auto jt=it->second. begin(); jt != it->second.end(); ) {
+					if (node_table.find_virtual_node(jt->first) == intervals[i].second) {
+						kvlist.push_back(*jt);
+						jt = it->second.erase(jt);
+					}
+				}
+			}
+			fprintf(stderr, "00000000000000000000  Get kv list: size=%d\n", kvlist.size());
+
 			// Send
+			m.type = MSG_DONATE_REQUEST;
 			m.set_kv_list(kvlist);
+			m.print("\t[[[  Donate  Data in interval  ]]] \n");
 			m.send(bootfd, m.data);
+			m.print("\t[[[  Donate  Data in interval  ]]] \n");
 			kvlist.clear();
 		}
-		close(bootfd);
 	}
+	
 	close(fd);
 
 	// no enough nodes
@@ -442,7 +461,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
 
 
-	printf ("<<< %d successfully got new node from manager!\n", id);
+	printf ("\n<<< Successfully add a new node !  Node ID = %d, New Node ID = %d\n", id, m.node_id);
 
 	return true;
 }
