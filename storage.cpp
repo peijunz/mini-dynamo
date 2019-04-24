@@ -47,14 +47,6 @@ void GTStoreStorage::init(int num_vnodes) {
 	}
 	printf("\n");
 
-/////////////	steal token from other nodes
-	for (auto& d : data) {
-		vid = d.first;
-		steal_token(vid);
-	}
-
-
-
 	printf ("Successfully add to manager!  Node ID = %d\n", id);
 
 	int size;
