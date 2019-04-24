@@ -66,8 +66,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	sprintf(m.data, "%d", num_vnodes);
 	int i = 0;
 	for (auto& p : node_table.storage_nodes) {
-		sprintf(m.data + 16 + i * 32, "%d", p.first);
-		sprintf(m.data + 32 + i * 32, "%d", p.second);
+		sprintf(m.data + 16 + i * 32, "%d %d", p.first, p.second);
 		i ++;
 	}
 	m.send(fd, m.data);

@@ -33,8 +33,7 @@ void GTStoreStorage::init(int num_vnodes) {
 	VirtualNodeID vid;
 	StorageNodeID sid;
 	for (int i=0; i<num_vnodes; i++) {
-		sscanf(m.data + 16 + i * 32, "%d", &vid);
-		sscanf(m.data + 32 + i * 32, "%d", &sid);
+		sscanf(m.data + 16 + i * 32, "%d %d", &vid, &sid);
 		node_table.add_virtual_node(vid);
 		node_table.storage_nodes.insert({vid, sid});
 		printf ("{%d, %d}\t", vid, sid);
@@ -99,9 +98,9 @@ StorageNodeID GTStoreStorage::find_coordinator(string key) {
 
 
 
-bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualNodeID) {
-	return false;
-}
+// bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualNodeID) {
+// 	return false;
+// }
 
 void GTStoreStorage::exec() {
 
@@ -116,22 +115,22 @@ void GTStoreStorage::exec() {
 		printf("Manager connected to some client\n");
 		if (m.type & CLIENT_MASK) {
 			// Because client does not listen, we do not
-			// close client until we got a reply
+			// close client until we got a reply at process_forward_reply
 			process_client_request(m, connfd);
 		} else{
 			if (m.type & NODE_MASK) {
 				if (m.type & REPLY_MASK)
-					process_node_reply(m, connfd);
+					process_forward_reply(m, connfd);
 				else
-					process_node_request(m, connfd);
+					process_forward_request(m, connfd);
 			} else if (m.type & COOR_MASK) {
 				if (m.type & REPLY_MASK)
-					process_node_reply(m, connfd);
+					process_coordinate_reply(m, connfd);
 				else
-					process_coordinator_request(m, connfd);
+					process_coordinate_request(m, connfd);
 			} else if (m.type & MANAGER_MASK) {
 				if (m.type & REPLY_MASK)
-					process_manager_reply(m, connfd);
+					process_manage_reply(m, connfd);
 			}
 			close(connfd);
 		}
@@ -146,7 +145,7 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	forward_tasks[m.client_id] = fd;
 	if (sid == id){
 		// Do not forward, reply and then close
-		process_node_request(m, fd);
+		process_forward_request(m, fd);
 	}
 	else{
 		// Forward message
@@ -157,8 +156,8 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	}
 	return false;
 }
-bool GTStoreStorage::process_node_request(Message& m, int fd) {
-	// do as a coordinator. Collect R/W from pref list
+bool GTStoreStorage::process_forward_request(Message& m, int fd) {
+	// do as a coordinator. Broadcast R/W requests to pref_list
 	string key;
 	Data data;
 	m.get_key_data(key, data);
@@ -192,10 +191,7 @@ bool GTStoreStorage::process_node_request(Message& m, int fd) {
 }
 
 
-bool GTStoreStorage::process_node_reply(Message& msg, int fd) {
-	// string key;
-	// Data data;
-	// msg.get_key_data(key, data);
+bool GTStoreStorage::process_forward_reply(Message& msg, int fd) {
 	assert(("no client socket stored", forward_tasks.count(msg.client_id)!=0));
 	int clientfd = forward_tasks[msg.client_id];
 	msg.type = MSG_CLIENT_REPLY;
@@ -205,7 +201,7 @@ bool GTStoreStorage::process_node_reply(Message& msg, int fd) {
 	return false;
 }
 
-bool GTStoreStorage::process_coordinator_request(Message& m, int fd) {
+bool GTStoreStorage::process_coordinate_request(Message& m, int fd) {
 	// Do as coordinator asked to do
 
 	string key;
@@ -227,18 +223,18 @@ bool GTStoreStorage::process_coordinator_request(Message& m, int fd) {
 	return true;
 }
 
-bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
+bool GTStoreStorage::process_coordinate_reply(Message& m, int fd) {
 	if (working_tasks.count(m.client_id) == 0) {
 		// task is already completed. Ignore redundant result
 		return false;
 	}
 
-	string key; 
+	string key;
 	Data data;
 	m.get_key_data(key, data);
 	working_tasks[m.client_id].first ++;
 
-	if ((m.type | WRITE_MASK) ||
+	if ((m.type & WRITE_MASK) ||
 		data.version >= working_tasks[m.client_id].second.version)
 	{
 		// new version, update result
@@ -255,7 +251,7 @@ bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
 		if (m.node_id == id) {
 			// if itself is the coordinator
 			m.set_key_data(key, working_tasks[m.client_id].second);
-			process_node_reply(m, -1);
+			process_forward_reply(m, -1);
 		} else {
 			// send back to transferrer
 			m.type = MSG_NODE_REPLY | (m.type & WRITE_MASK);
@@ -273,7 +269,7 @@ bool GTStoreStorage::process_coordinator_reply(Message& m, int fd) {
 	return false;
 }
 
-bool GTStoreStorage::process_manager_reply(Message& m, int fd) {
+bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
 	// a new node with id==m.node_id joins
 	int num_vnodes;

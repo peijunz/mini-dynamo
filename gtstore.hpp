@@ -93,14 +93,18 @@ struct Message {
 
 
 class GTStoreClient {
+private:
+	int get_contact_node(int id);
+	int connect_contact_node();
+	int node_id; // Major contact node for this client
 public:
 	int client_id;
-	int node_id; // Major contact node for this client
 	val_t value;
 	void init(int id);
 	void finalize();
 	val_t get(string key);
 	bool put(string key, string value);
+
 };
 
 
@@ -171,18 +175,18 @@ public:
 	
 
 	// coordinator functions
-	bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
-	bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
+	// bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
+	// bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
 
 
 	void exec();
 
 	bool process_client_request(Message& msg, int fd);
-	bool process_node_request(Message& msg, int fd);
-	bool process_node_reply(Message& msg, int fd);
-	bool process_coordinator_request(Message& msg, int fd);
-	bool process_coordinator_reply(Message& msg, int fd);
-	bool process_manager_reply(Message& msg, int fd);
+	bool process_forward_request(Message& msg, int fd);
+	bool process_forward_reply(Message& msg, int fd);
+	bool process_coordinate_request(Message& msg, int fd);
+	bool process_coordinate_reply(Message& msg, int fd);
+	bool process_manage_reply(Message& msg, int fd);
 };
 
 #endif

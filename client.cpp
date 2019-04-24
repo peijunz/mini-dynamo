@@ -233,17 +233,13 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 
 
 ////////////////////////////////////////////////////
-void GTStoreClient::init(int id) {
-	
-	cout << "Inside GTStoreClient::init() for client " << id << "\n";
-	client_id = id;
-	char buf[32];
+int GTStoreClient::get_contact_node(int id) {
     int fd = openfd(manager_addr);
     if (fd < 0){
         printf("error in clientfd\n");
         exit(-1);
     }
-    Message msg(MSG_CLIENT_REQUEST, client_id, -1, 0);
+    Message msg(MSG_CLIENT_REQUEST, id, -1, 0);
     msg.send(fd);
     msg.recv(fd);
 	close(fd);
@@ -251,7 +247,25 @@ void GTStoreClient::init(int id) {
 		printf("No available node\n");
 		//exit(1);
 	}
-	node_id = msg.node_id;
+	return msg.node_id;
+}
+
+int GTStoreClient::connect_contact_node(){
+	int fd = -1;
+	for (int i=0; i<4; i++){
+		fd = openfd(storage_node_addr(node_id).c_str());
+		if (fd > 0) return fd;
+		node_id = get_contact_node(client_id);
+	}
+	printf("error in clientfd\n");
+	exit(-1);
+}
+
+void GTStoreClient::init(int id) {
+	
+	cout << "Inside GTStoreClient::init() for client " << id << "\n";
+	client_id = id;
+	node_id = get_contact_node(client_id);
 	printf("Got contact %d\n", node_id);
 }
 
@@ -264,18 +278,12 @@ val_t GTStoreClient::get(string key) {
 	Message msg(MSG_CLIENT_REQUEST, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
 	msg.data = new char[msg.length];
 	msg.set_key_data(key, data);
-	string nodeaddr = node_addr + "_" + to_string(node_id);
-	int fd = openfd(nodeaddr.c_str());
-    if (fd < 0){
-        printf("error in clientfd\n");
-        exit(-1);
-    }
+	int fd = connect_contact_node();
 	msg.send(fd, msg.data);
 
 	// receive data
 	msg.recv(fd);
-
-
+	msg.get_key_data(key, data);
 	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << "\n";
 	val_t value;
 	// Get the value!
@@ -288,11 +296,27 @@ bool GTStoreClient::put(string key, string value) {
 	// Attempt to find its contact
 	// If failed, then ask manager for a new contact
 
-	string print_value = "";
-	for (uint i = 0; i < value.size(); i++) {
-		print_value += value[i] + " ";
-	}
-	cout << "Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << print_value << "\n";
+	// string print_value = "";
+	// for (uint i = 0; i < value.size(); i++) {
+	// 	print_value += value[i] + " ";
+	// }
+	Data data;
+	data.value = value;
+	Message msg(MSG_CLIENT_REQUEST, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
+	msg.data = new char[msg.length];
+	msg.set_key_data(key, data);
+	int fd = connect_contact_node();
+	msg.send(fd, msg.data);
+
+	// receive data
+	msg.recv(fd);
+	close(fd);
+	cout << "Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << value << "\n";
+	//// Test
+	// string key;
+	msg.get_key_data(key, data);
+	cout << "Inside GTStoreClient::put() for reply: " << client_id << " key: " << key << " value: " << value << "\n";
+	///////
 	// Put the value!
 	return true;
 }
