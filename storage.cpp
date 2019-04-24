@@ -337,6 +337,11 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 	return false;
 }
 
+bool GTStoreStorage::process_donate_request(Message& m) {
+	/////// TODO:
+	return false;
+}
+
 
 bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	

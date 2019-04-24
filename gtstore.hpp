@@ -95,8 +95,12 @@ struct Message {
 
 	int set_key_data(string key, Data data);
 	int get_key_data(string& key, Data& data);
+
 	int set_kv_list(vector<pair<string, Data>>&);
 	vector<pair<string, Data>> get_kv_list();
+
+	int set_intervals(vector<pair<VirtualNodeID, VirtualNodeID>>& intervals);
+	vector<pair<VirtualNodeID, VirtualNodeID>> get_intervals();
 };
 
 
@@ -213,6 +217,8 @@ public:
 	bool process_coordinate_request(Message& msg);
 	bool process_coordinate_reply(Message& msg);
 	bool finish_coordination(Message &m, string &key);
+
+	bool process_donate_request(Message& m) ;
 };
 
 #endif
