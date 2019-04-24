@@ -46,6 +46,8 @@ void GTStoreStorage::init(int num_vnodes) {
 			//size_t hash_key = node_table.consistent_hash(vid);
 			data.insert({vid, {}});
 		}
+		else
+			node_table.nodes.insert(sid);
 	}
 	printf("\n");
 
@@ -73,13 +75,15 @@ void GTStoreStorage::init(int num_vnodes) {
 
     m.length = 0;
 	m.type = 0;
+	// m.node_id = -1;
 	m.send(fd);
 
-	cout << "Inside GTStoreStorage::init()\n";
+	printf("Inside GTStoreStorage::init() nodes %d/%d\n", node_table.nodes.size(), CONFIG_N);
 	if (node_table.nodes.size() > CONFIG_N)
 		collect_tokens();
 
     m.length = 0;
+	// m.node_id = -2;
 	m.send(fd);
 	close(fd);
 }
