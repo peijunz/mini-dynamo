@@ -172,11 +172,11 @@ int Message::set_key_data(string key, Data data) {
 	if (key.size() > MAX_KEY_LENGTH)
 		return -1;
 	if (this->data) delete[] this->data;
-	this->data = new char[MAX_KEY_LENGTH+1 + data.get_length()];
+	this->data = new char[key.size()+1 + data.get_length()];
 	char*cur=this->data;
 	length = 0;
+	length += 1 + key.size();
 	strcpy(this->data, key.data());
-	length = key.size()+1;
 	length += 1 + sprintf(this->data + length, "%lld", data.version);
 	strcpy(this->data + length, data.value.data());
 	length += 1+data.value.size();
@@ -189,11 +189,58 @@ int Message::get_key_data(string& key, Data& data) {
 	sscanf(cur, "%lld", &data.version);
 	cur += 1+strlen(cur);
 	data.value = cur;
+	cur += 1+strlen(cur);
 	// printf("Received %s %lld %s\n", key.data(), data.version, data.value.data());
 	return 0;
 }
 
 
+	int Message::set_kv_list(vector<pair<string, Data>>& kvs){
+		int bufsize = 32;
+		for (auto &x:kvs){
+			bufsize += 1+x.first.size()+x.second.get_length();
+		}
+
+		if (this->data) delete[] this->data;
+		this->data = new char[bufsize];
+		length = 0;
+		// Serialization
+		length += 1 + sprintf(this->data + length, "%d", kvs.size());
+		for (auto &x:kvs){
+			strcpy(this->data+length, x.first.data());
+			length += 1 + x.first.size();
+
+			length += 1 + sprintf(this->data + length, "%lld", x.second.version);
+
+			strcpy(this->data + length, x.second.value.data());
+			length += 1 + x.second.value.size();
+		}
+		return length;
+	}
+	vector<pair<string, Data>> Message::get_kv_list(){
+		vector<pair<string, Data>> kvs;
+		int n=0;
+		string key;
+		Data data;
+		char *cur=this->data;
+
+		sscanf(cur, "%d", &n);
+		cur += 1+strlen(cur);
+
+		for (int i=0; i<n; i++){
+			key = cur;
+			cur += 1+strlen(cur);
+
+			sscanf(cur, "%lld", &data.version);
+			cur += 1+strlen(cur);
+
+			data.value = cur;
+			cur += 1+strlen(cur);
+
+			kvs.push_back({key, data});
+		}
+		return kvs;
+	}
 
 
 
