@@ -29,7 +29,7 @@ int main() {
     }
     children.push_back(manager_id);
     sleep(1);
-    for (int i=0; i<4; i++){
+    for (int i=0; i<1; i++){
         if ((pid = Fork()) == 0) {
             execve("./storage", NULL, NULL);
             return 0;
@@ -38,7 +38,7 @@ int main() {
     }
     sleep(1);
     fprintf(stderr, "===============================\n");
-    for (int i=0; i<4; i++){
+    for (int i=0; i<1; i++){
         if ((pid = Fork()) == 0) {
             char key[32], val[32];
             GTStoreClient client;

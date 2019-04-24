@@ -21,9 +21,10 @@ using namespace std;
 
 typedef vector<string> val_t;
 
-#define CONFIG_N	3
-#define CONFIG_R	2
-#define CONFIG_W	2
+#define CONFIG_V	3
+#define CONFIG_N	1
+#define CONFIG_R	1
+#define CONFIG_W	1
 
 #define MAX_ID_LENGTH	32
 #define MAX_KEY_LENGTH	20
@@ -165,7 +166,7 @@ public:
 	unordered_map<ClientID, int>				forward_tasks;	// task --> socket
 	unordered_map<ClientID, pair<int, Data>>	working_tasks;	// task --> received results
 
-	void init(int num_vnodes=CONFIG_N);
+	void init(int num_vnodes=CONFIG_V);
 
 	// data functions
 	bool read_local(string key, Data& data);
@@ -188,6 +189,7 @@ public:
 	bool process_coordinate_request(Message& msg, int fd);
 	bool process_coordinate_reply(Message& msg, int fd);
 	bool process_manage_reply(Message& msg, int fd);
+	bool finish_coordination(Message &m, string &key);
 };
 
 #endif

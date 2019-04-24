@@ -74,6 +74,7 @@ int read_line(int fd, char* buf, size_t n, int *loc) {
 		for (char *p=buf-nread; p < buf; p++){
 			if (*p=='\n'){
 				*loc = n-rem-(buf-p)+1;
+				// printf(">>> remain %10s\n", p+1);
 				return (ssize_t)(n - rem);
 			}
 		}
@@ -133,6 +134,7 @@ int Message::recv(int fd){
 	// if (length>0){
 	data = new char[length+1];
 	data[length] = 0;
+	// printf(">>> At offset %d remain %10s\n", offset, buf+offset);
 	memcpy(data, buf+offset, n-offset);
 	rio_readn(fd, data+n-offset, length-(n-offset));
 	// }
@@ -160,6 +162,7 @@ void Message::print(){
 };
 
 int Message::set_key_data(string key, Data data) {
+	// printf("Set key val: key %s, val %s\n", key.c_str(), data.value.c_str());
 	if (key.size() > MAX_KEY_LENGTH)
 		return -1;
 	length = MAX_KEY_LENGTH+1 + data.get_length();
@@ -177,7 +180,7 @@ int Message::get_key_data(string& key, Data& data) {
 	key = this->data;
 	sscanf(this->data + MAX_KEY_LENGTH+1, "%lld", &data.version);
 	data.value = this->data + MAX_KEY_LENGTH + 1 + 64 + 1;
-	printf("Exited get kv\n");
+	printf("%s Get L=%d key val: key %s, val %s\n", owner.c_str(), length, this->data, this->data + MAX_KEY_LENGTH + 1 + 64 + 1);
 	return 0;
 }
 
@@ -321,7 +324,7 @@ val_t GTStoreClient::get(string key) {
 	// receive data
 	m.recv(fd);
 	m.get_key_data(key, data);
-	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << "\n";
+	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << " value: "<<data.value<< "\n";
 	val_t value;
 	// Get the value!
 	
@@ -339,7 +342,7 @@ bool GTStoreClient::put(string key, string value) {
 	// }
 	Data data;
 	data.value = value;
-	Message m(MSG_CLIENT_REQUEST, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
+	Message m(MSG_CLIENT_REQUEST|WRITE_MASK, client_id, node_id, MAX_KEY_LENGTH+1 + data.get_length());
 	m.data = new char[m.length];
 	m.set_key_data(key, data);
 	int fd = connect_contact_node();
@@ -349,7 +352,7 @@ bool GTStoreClient::put(string key, string value) {
 	// receive data
 	m.recv(fd);
 	close(fd);
-	assert(("not a reply for client", m.type & MSG_CLIENT_REPLY));
+	assert(m.type==MSG_CLIENT_REPLY);
 	cout << "Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << value << "\n";
 	//// Test
 	// string key;
