@@ -116,28 +116,34 @@ void GTStoreStorage::exec() {
 		Message m;
 		m.recv(connfd);
 
-		printf("Received mtype: %d\n", m.type);
+		printf("%s Received mtype: %d\n", __func__, m.type);
 		m.print();
 		if (m.type & CLIENT_MASK) {
 			// Because client does not listen, we do not
 			// close client until we got a reply at process_forward_reply
 			process_client_request(m, connfd);
-		} else{
-			if (m.type & FORWARD_MASK) {
-				if (m.type & REPLY_MASK)
-					process_forward_reply(m);
-				else
-					process_forward_request(m);
-			} else if (m.type & COOR_MASK) {
-				if (m.type & REPLY_MASK)
-					process_coordinate_reply(m);
-				else
-					process_coordinate_request(m);
-			} else if (m.type & MANAGE_MASK) {
-				if (m.type & REPLY_MASK)
-					process_manage_reply(m, connfd);
-			}
+		}
+		else if (m.type == MSG_MANAGE_REPLY){
+			process_manage_reply(m, connfd);
+		}
+		else{
+			// Communication between storage nodes, sockets are disposable
 			close(connfd);
+			switch (m.type & (FORWARD_MASK|COOR_MASK|REPLY_MASK))
+			{
+				case MSG_FORWARD_REPLY:
+					process_forward_reply(m);
+					break;
+				case MSG_FORWARD_REQUEST:
+					process_forward_request(m);
+					break;
+				case MSG_COORDINATE_REPLY:
+					process_coordinate_reply(m);
+					break;
+				case MSG_COORDINATE_REQUEST:
+					process_coordinate_request(m);
+					break;
+			}
 		}
 	}
 }
@@ -148,6 +154,8 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	char *val = m.data + offset;
 	StorageNodeID sid = find_coordinator(m.data);
 	forward_tasks[m.client_id] = fd;
+	printf("SIZE of forward tasks for node %d is %d\n", id, forward_tasks.size());
+
 	if (sid == id){
 		// Do not forward, reply and then close
 		printf("Contact is coordinatior\n");
@@ -176,7 +184,7 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 
 	// initialize task
 	working_tasks.insert({m.client_id, {0, Data()}});
-
+	assert(working_tasks.count(m.client_id)!=0);
 	// itself
 	pref_list.erase(pref_list.begin());
 	if (m.type & WRITE_MASK) {
@@ -188,35 +196,35 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 		read_local(key, data);
 		printf("Read data %s\n", data.value.data());
 	}
-	working_tasks[m.client_id].first ++;
+	printf("process_forward_request todo=%d\n", working_tasks[m.client_id].first);
+	working_tasks[m.client_id].first++;
+	printf("process_forward_request with todo=%d\n", working_tasks[m.client_id].first);
 	working_tasks[m.client_id].second = data;
 
+	// ask other nodes to complete their work
+	m.coordinator_id = id;
+	for (auto& pref : pref_list) {
+		printf("Broadcast with proxy node_id...\n");
+		m.type = MSG_COORDINATE_REQUEST | (m.type & WRITE_MASK);
+		string coordinator_addr = node_addr + "_" + to_string(pref.second);
+		int nodefd = openfd(coordinator_addr.data());
+		if (nodefd < 0){
+			printf("nodefd");
+			exit(1);
+		}
+		m.owner = __func__;
+		m.send(nodefd, m.data);
+		close(nodefd);
+	}
 	if (working_tasks[m.client_id].first >= 
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
 		finish_coordination(m, key);
 		printf("No need to broadcast\n");
-		return 0;
-	}
-	else{
-		// ask other nodes to complete their work
-		for (auto& pref : pref_list) {
-			printf("Broadcast...\n");
-			m.type = MSG_COORDINATE_REQUEST | (m.type & WRITE_MASK);
-			string coordinator_addr = node_addr + "_" + to_string(pref.second);
-			int nodefd = openfd(coordinator_addr.data());
-			if (nodefd < 0){
-				printf("nodefd");
-				exit(1);
-			}
-			m.owner = __func__;
-			m.send(nodefd, m.data);
-			close(nodefd);
-		}
-
 	}
 
-	printf("Exited process_forward_request\n");
+	// printf("SIZE of working tasks for node %d is %d\n", id, working_tasks.size());
+	printf("Exited process_forward_request with todo=%d\n", working_tasks[m.client_id].first);
 	return false;
 }
 
@@ -239,35 +247,41 @@ bool GTStoreStorage::process_coordinate_request(Message& m) {
 	string key;
 	Data data;
 	m.get_key_data(key, data);
+	int node_fd = openfd(storage_node_addr(m.coordinator_id).data());
+	if (node_fd < 0){
+		perror("node fd");
+		exit(1);
+	}
 	if (m.type & WRITE_MASK) {
 		// write
 		write_local(key, data);
 		m.type = MSG_COORDINATE_REPLY | (m.type & WRITE_MASK);
 		m.owner = __func__;
-		// TODO: fix bug
-		// m.send(fd);
+		m.send(node_fd, m.data);
+		close(node_fd);
 	} 
 	else {
 		// read
 		read_local(key, data);
-		m.type = MSG_COORDINATE_REPLY | (m.type & WRITE_MASK);
+		m.type = MSG_COORDINATE_REPLY;
 		m.set_key_data(key, data);
 		m.owner = __func__;
-		// TODO: fix bug
-		// m.send(fd, m.data);
+		m.send(node_fd, m.data);
+		close(node_fd);
 	}
 	return true;
 }
 
 bool GTStoreStorage::finish_coordination(Message &m, string &key){
 	// task completed. 
-
+	printf("Entering %s\n", __func__);
 	if (m.node_id == id) {
-		// if itself is the coordinator
+		printf("itself is the coordinator\n");
 		m.set_key_data(key, working_tasks[m.client_id].second);
+		printf("SIZE of forward tasks for node %d is %d\n", id, forward_tasks.size());
 		process_forward_reply(m);
 	} else {
-		// send back to transferrer
+		printf("send back to transferrer\n");
 		m.type = MSG_FORWARD_REPLY | (m.type & WRITE_MASK);
 		m.set_key_data(key, working_tasks[m.client_id].second);
 		string transferrer_addr = node_addr + "_" + to_string(m.node_id);
@@ -287,10 +301,13 @@ bool GTStoreStorage::finish_coordination(Message &m, string &key){
 }
 
 bool GTStoreStorage::process_coordinate_reply(Message& m) {
+	// printf("SIZE of working tasks for node %d is %d\n", id, working_tasks.size());
 	if (working_tasks.count(m.client_id) == 0) {
 		// task is already completed. Ignore redundant result
+		printf(">>> Exiting %s\n", __func__);
 		return false;
 	}
+
 
 	string key;
 	Data data;
@@ -305,13 +322,14 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 	}
 
 
-
+	printf(">>> done task %d\n", working_tasks[m.client_id].first);
 	if (working_tasks[m.client_id].first >= 
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
 		finish_coordination(m, key);
 	}
 
+	printf("Exiting 2 %s\n", __func__);
 	return false;
 }
 

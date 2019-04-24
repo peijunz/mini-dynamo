@@ -23,7 +23,7 @@ typedef vector<string> val_t;
 
 #define CONFIG_V	3
 #define CONFIG_N	2
-#define CONFIG_R	1
+#define CONFIG_R	2
 #define CONFIG_W	2
 
 #define MAX_ID_LENGTH	32
@@ -78,6 +78,7 @@ struct Message {
 	int type;
 	ClientID client_id;
 	StorageNodeID node_id;
+	StorageNodeID coordinator_id=-1;
 	size_t length;
 	char *data=NULL;
 	int set(int t, int cid, int nid, int l);
