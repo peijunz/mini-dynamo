@@ -140,10 +140,8 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 			perror("wrong fd\n");
 		}
 		m.send(fd, m.data);
-
-
-
-		
+		m.set_intervals(donate_info[nodeid]);
+		m.send(fd, m.data);
 		close(fd);
 	}
 
