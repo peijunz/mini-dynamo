@@ -97,12 +97,6 @@ StorageNodeID GTStoreStorage::find_coordinator(string key) {
 	return node_table.get_preference_list(key, 1)[0].second;
 }
 
-
-
-bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualNodeID) {
-	return false;
-}
-
 void GTStoreStorage::exec() {
 
 	int connfd;
