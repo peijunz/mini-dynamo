@@ -42,13 +42,13 @@ public:
 	}
 };
 
-#define ERROR_MASK 1<<8
 #define CLIENT_MASK 1<<0
-#define NODE_MASK 1<<1
+#define FORWARD_MASK 1<<1
 #define COOR_MASK 1<<2
 #define MANAGER_MASK 1<<3
 #define WRITE_MASK 1<<4
 #define REPLY_MASK 1<<5
+#define ERROR_MASK 1<<8
 
 
 
@@ -60,11 +60,11 @@ typedef int ClientID;
 typedef enum {
 	MSG_CLIENT_REQUEST = CLIENT_MASK,
 	MSG_CLIENT_REPLY = CLIENT_MASK | REPLY_MASK,
-	MSG_NODE_REQUEST = NODE_MASK,
-	MSG_MANAGER_REPLY = MANAGER_MASK | REPLY_MASK,
-	MSG_NODE_REPLY = NODE_MASK | REPLY_MASK,
-	MSG_COORDINATOR_REQUEST = COOR_MASK,
-	MSG_COORDINATOR_REPLY = COOR_MASK | REPLY_MASK,
+	MSG_MANAGE_REPLY = MANAGER_MASK | REPLY_MASK,
+	MSG_FORWARD_REQUEST = FORWARD_MASK,
+	MSG_FORWARD_REPLY = FORWARD_MASK | REPLY_MASK,
+	MSG_COORDINATE_REQUEST = COOR_MASK,
+	MSG_COORDINATE_REPLY = COOR_MASK | REPLY_MASK,
 } message_type_t;
 
 int openfd(const char *addr);
@@ -73,6 +73,7 @@ ssize_t rio_readn(int fd, char* buf, size_t n);
 int read_line(int fd, char* buf, size_t n, int *loc);
 
 struct Message {
+	string owner="";
 	int type;
 	ClientID client_id;
 	StorageNodeID node_id;

@@ -37,6 +37,7 @@ int main() {
         children.push_back(pid);
     }
     sleep(1);
+    fprintf(stderr, "===============================\n");
     for (int i=0; i<4; i++){
         if ((pid = Fork()) == 0) {
             char key[32], val[32];
