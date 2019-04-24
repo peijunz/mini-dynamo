@@ -361,10 +361,33 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	}
 	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
 
+	m.recv(fd);
+	vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
+	close(fd);
+
+	int bootfd = openfd(storage_node_addr(m.node_id).data());
+	if (bootfd < 0){
+		perror("ERROR: connect boot fail");
+		exit(1);
+	}
+	m.send(bootfd, m.data);
+	vector<pair<string, Data>> kvlist;
+	for (int i=0; i<intervals.size(); i++){
+		// Extract kv list
+		// Send
+		m.set_kv_list(kvlist);
+		m.send(bootfd, m.data);
+		kvlist.clear();
+	}
+	close(bootfd);
+	// no enough nodes
+	// if (node_table.nodes.size() <= CONFIG_N) {
+	// 	return true;
+	// }
+	
 
 
 	printf ("<<< Successfully add to manager!  Node ID = %d\n", id);
-	close(fd);
 
 	return true;
 }
