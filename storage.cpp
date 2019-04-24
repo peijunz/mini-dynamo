@@ -362,12 +362,6 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
 
 
-	// no enough nodes
-	if (node_table.nodes.size() <= CONFIG_N) {
-		return true;
-	}
-	
-
 
 	printf ("<<< Successfully add to manager!  Node ID = %d\n", id);
 	close(fd);
