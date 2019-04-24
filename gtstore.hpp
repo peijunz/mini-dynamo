@@ -19,7 +19,7 @@
 
 using namespace std;
 
-typedef vector<string> val_t;
+typedef string val_t;
 
 #define CONFIG_V	3
 #define CONFIG_N	5
@@ -107,7 +107,7 @@ public:
 	void init(int id);
 	void finalize();
 	val_t get(string key);
-	bool put(string key, string value);
+	bool put(string key, val_t value);
 
 };
 
