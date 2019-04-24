@@ -116,7 +116,7 @@ int Message::send(int fd, const char *content){
 	char header[256];
 	// print(owner + " Send");
 
-	sprintf(header, "%d %d %d %d %ld\n", type, client_id, node_id, coordinator_id, length);
+	sprintf(header, "%d %d %d %d %d %ld\n", type, client_id, node_id, coordinator_id, vid, length);
 	if (rio_writen(fd, header, strlen(header)) == -1){
 		printf("Write error\n");
 		exit(-1);
@@ -141,7 +141,7 @@ int Message::recv(int fd){
 		fprintf(stderr, "Failed in reading message\n");
 		exit(-1);
 	}
-	sscanf(buf, "%d %d %d %d %ld\n", &type, &client_id, &node_id, &coordinator_id, &length);
+	sscanf(buf, "%d %d %d %d %d %ld\n", &type, &client_id, &node_id, &coordinator_id, &vid, &length);
 	data = new char[length+1];
 	data[length] = 0;
 	memcpy(data, buf+offset, n-offset);

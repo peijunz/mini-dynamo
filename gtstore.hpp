@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -81,6 +82,7 @@ struct Message {
 	ClientID client_id;
 	StorageNodeID node_id;
 	StorageNodeID coordinator_id=-1;
+	VirtualNodeID vid=-1;
 	size_t length;
 	char *data=NULL;
 	int set(int t, int cid, int nid, int l);
@@ -123,6 +125,8 @@ public:
 	int num_storage_nodes = 0;
 	map<size_t, VirtualNodeID>	virtual_nodes;
 	map<VirtualNodeID, StorageNodeID> 	storage_nodes;
+
+	unordered_set<StorageNodeID> 	nodes;
 	
 
 	NodeTable(){};
@@ -139,7 +143,8 @@ public:
 };
 
 
-#define storage_node_addr(id) (node_addr + "_" + to_string(id))
+#define storage_node_addr(id) ("node.socket_" + to_string(id))
+#define virtual_node_addr(id) ("virtual_node_" + to_string(id))
 
 const string node_addr = "node.socket";
 constexpr char manager_addr[]="manager.socket";
@@ -157,13 +162,21 @@ public:
 	int manage_node_request(Message& m, int fd);
 };
 
+class compare {
+public:
+	bool operator() (const VirtualNodeID& v1,  const VirtualNodeID& v2) const {
+		return hash<string>{}(virtual_node_addr(v1)) < hash<string>{}(virtual_node_addr(v2));
+	}
+};
+
 class GTStoreStorage {
 public:
 	StorageNodeID	id=-1;
 	NodeTable	node_table;
 	int nodefd;
 
-	map<VirtualNodeID, unordered_map<string, Data>>	data;
+
+	map<VirtualNodeID, unordered_map<string, Data>, compare>	data;
 
 	// tasks
 	unordered_map<ClientID, int>				forward_tasks;	// task --> socket
@@ -174,8 +187,8 @@ public:
 	void steal_token(VirtualNodeID);
 
 	// data functions
-	bool read_local(string key, Data& data);
-	bool write_local(string key, Data data);
+	bool read_local(VirtualNodeID vid, string key, Data& data);
+	bool write_local(VirtualNodeID vid, string key, Data data);
 
 	// node functions
 	StorageNodeID find_coordinator(string key);
@@ -190,13 +203,16 @@ public:
 	// Exclusive connection to client/manager
 	bool process_client_request(Message& msg, int fd);
 	bool process_manage_reply(Message& msg, int fd);
+	//// TODO: leave
+
+
+
 	// Communication between nodes
 	bool process_forward_request(Message& msg);
 	bool process_forward_reply(Message& msg);
 	bool process_coordinate_request(Message& msg);
 	bool process_coordinate_reply(Message& msg);
 	bool finish_coordination(Message &m, string &key);
-	bool process_donate_request(Message &m);
 };
 
 #endif
