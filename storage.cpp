@@ -70,6 +70,8 @@ void GTStoreStorage::init(int num_vnodes) {
 		exit(1);
 	}
 	cout << "Inside GTStoreStorage::init()\n";
+	if (node_table.storage_nodes.size() > CONFIG_N)
+		collect_tokens();
 
     m.length = 0;
 	m.send(fd);
@@ -78,6 +80,35 @@ void GTStoreStorage::init(int num_vnodes) {
 
 
 
+void GTStoreStorage::collect_tokens(){
+	int todo = CONFIG_N;
+	int connfd;
+	vector<pair<int, int>> intervals;
+	vector<pair<string, Data>> kvlist;
+	while (todo){
+		connfd = accept(nodefd, NULL, NULL);
+    	if (connfd == -1) {
+        	perror("Accept fail");
+		}
+		Message m;
+		m.owner = __func__;
+		m.recv(connfd);
+		assert(m.type == MSG_DONATE_REQUEST);
+		intervals = m.get_intervals();
+		for (int i=0; i<intervals.size(); i++){
+			m.recv(connfd);
+			kvlist = m.get_kv_list();
+			// TODO: Update kvlist to own storage
+			auto it = data.upper_bound(intervals[i].first);
+			if (it == data.end()) it = data.begin();
+			for (auto &x: kvlist){
+				it->second.insert(x);
+			}
+		}
+		todo--;
+	}
+
+}
 
 bool GTStoreStorage::read_local(VirtualNodeID v_id, string key, Data& data) {
 	if (this->data.count(v_id) == 0 ||

@@ -202,7 +202,7 @@ public:
 	// bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
 	// bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
 
-
+	void collect_tokens();
 	void exec();
 	// Exclusive connection to client/manager
 	bool process_client_request(Message& msg, int fd);
