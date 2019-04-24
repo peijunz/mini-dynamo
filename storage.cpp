@@ -63,7 +63,6 @@ void GTStoreStorage::init(int num_vnodes) {
 	}
 	cout << "Inside GTStoreStorage::init()\n";
 
-    m.set(0, -1, -1, 0);
 	m.send(fd);
 	close(fd);
 }
@@ -119,7 +118,9 @@ void GTStoreStorage::exec() {
 			// Because client does not listen, we do not
 			// close client until we got a reply at process_forward_reply
 			process_client_request(m, connfd);
-		} else{
+		} else{		
+			fprintf(stderr, ">>>> I got message from node/manager ! \n");	
+			m.print();
 			if (m.type & FORWARD_MASK) {
 				if (m.type & REPLY_MASK)
 					process_forward_reply(m, connfd);
@@ -134,6 +135,7 @@ void GTStoreStorage::exec() {
 				if (m.type & REPLY_MASK)
 					process_manage_reply(m, connfd);
 			}
+			//m.send(connfd);
 			close(connfd);
 		}
 	}
@@ -147,6 +149,7 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	forward_tasks[m.client_id] = fd;
 	if (sid == id){
 		// Do not forward, reply and then close
+		fprintf(stderr, "I am the coordinator!\n");
 		process_forward_request(m, fd);
 	}
 	else{
@@ -155,6 +158,7 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 		int fwdfd = openfd(storage_node_addr(sid).data());
 		m.owner = __func__;
 		m.send(fwdfd, m.data);
+		//m.recv(fwdfd);
 		close(fwdfd);
 	}
 	return false;
@@ -164,6 +168,9 @@ bool GTStoreStorage::process_forward_request(Message& m, int fd) {
 	string key;
 	Data data;
 	m.get_key_data(key, data);
+
+	fprintf(stderr, "unpack: %s\n", key);
+
 	auto pref_list = node_table.get_preference_list(key, CONFIG_N);
 
 	// initialize task
@@ -188,6 +195,7 @@ bool GTStoreStorage::process_forward_request(Message& m, int fd) {
 		int nodefd = openfd(coordinator_addr.data());
 		m.owner = __func__;
 		m.send(nodefd, m.data);
+		//m.recv(nodefd);
 		close(nodefd);
 	}
 
@@ -195,13 +203,15 @@ bool GTStoreStorage::process_forward_request(Message& m, int fd) {
 }
 
 
-bool GTStoreStorage::process_forward_reply(Message& msg, int fd) {
-	assert(("no client socket stored", forward_tasks.count(msg.client_id)!=0));
-	int clientfd = forward_tasks[msg.client_id];
-	msg.type = MSG_CLIENT_REPLY;
-	msg.send(clientfd, msg.data);
+bool GTStoreStorage::process_forward_reply(Message& m, int fd) {
+	assert(("no client socket stored", forward_tasks.count(m.client_id)!=0));
+	int clientfd = forward_tasks[m.client_id];
+	m.type = MSG_CLIENT_REPLY;
+	m.owner = __func__;
+	m.send(clientfd, m.data);
+	//m.recv(clientfd);
 	close(clientfd);
-	forward_tasks.erase(msg.client_id);
+	forward_tasks.erase(m.client_id);
 	return false;
 }
 
@@ -266,6 +276,7 @@ bool GTStoreStorage::process_coordinate_reply(Message& m, int fd) {
 			int nodefd = openfd(transferrer_addr.data());
 			m.owner = __func__;
 			m.send(nodefd, m.data);
+			//m.recv(nodefd);
 			close(nodefd);
 		}
 
