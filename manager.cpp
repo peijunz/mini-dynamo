@@ -42,40 +42,11 @@ int GTStoreManager::manage_client_request(Message &m, int fd){
 	printf("<<< %s: Exiting\n", __func__);
 	return 0;
 }
+unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>>
+GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 
-int GTStoreManager::manage_node_request(Message &m, int fd){
-	// Manage entrance and exit status of nodes
-	int num_new_vnodes;
-	sscanf(m.data, "%d", &num_new_vnodes);
-	printf(">>> %s: Entering with %d requested vnodes\n", __func__, num_new_vnodes);
-	int sid = -1;
-	vector<VirtualNodeID> vvid = {};
-	node_table.add_storage_node(num_new_vnodes, sid, vvid);
-	node_table.nodes.insert(sid);
-
-	m.type = MSG_MANAGE_REPLY;
-	m.node_id = sid;
-	storage_nodes.insert(sid);
-
-	// copy to new node
-	if (m.data) delete[] m.data;
-	int num_vnodes = node_table.storage_nodes.size();
-	m.data = new char[16 + 32 * num_vnodes];
-	m.length = 1+sprintf(m.data, "%d", num_vnodes);
-	for (auto& p : node_table.storage_nodes) {
-		m.length += 1+sprintf(m.data + m.length, "%d %d", p.first, p.second);
-	}
-	m.owner = __func__;
-	m.send(fd, m.data);
-	fprintf(stderr, "\t----Sent to new node---\n");
-	m.recv(fd);
-	fprintf(stderr, "\t----Got ACK from new node---\n");
-	close(fd);
-	
 	// compute donate information
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>> >	donate_info;
-	if (node_table.nodes.size() > CONFIG_N) {
-		fprintf(stderr, "start computing....... total: %u\n", vvid.size());
 		for (VirtualNodeID vid : vvid) {
 			fprintf(stderr, "\tcomputing.......%u\n", vid);
 			// head: k previous
@@ -126,12 +97,43 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 				}
 			}
 		}
-	}
+	return donate_info;
+}
+int GTStoreManager::manage_node_request(Message &m, int fd){
+	// Manage entrance and exit status of nodes
+	int num_new_vnodes;
+	sscanf(m.data, "%d", &num_new_vnodes);
+	printf(">>> %s: Entering with %d requested vnodes\n", __func__, num_new_vnodes);
+	int sid = -1;
+	vector<VirtualNodeID> vvid = {};
+	node_table.add_storage_node(num_new_vnodes, sid, vvid);
+	node_table.nodes.insert(sid);
 
+	m.type = MSG_MANAGE_REPLY;
+	m.node_id = sid;
+	storage_nodes.insert(sid);
+
+	// copy to new node
+	if (m.data) delete[] m.data;
+	int num_vnodes = node_table.storage_nodes.size();
+	m.data = new char[16 + 32 * num_vnodes];
+	m.length = 1+sprintf(m.data, "%d", num_vnodes);
+	for (auto& p : node_table.storage_nodes) {
+		m.length += 1+sprintf(m.data + m.length, "%d %d", p.first, p.second);
+	}
+	m.owner = __func__;
+	m.send(fd, m.data);
+	m.recv(fd);
+	
+	// TODO
+	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>> donate_info;
+	if (node_table.nodes.size() > CONFIG_N) {
+		donate_info = donate_information(vvid);
+	}
 	// broadcast to old nodes
 	fprintf(stderr, "\t%s: Broadcast to storage nodes\n", __func__);
 
-	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
+	for (StorageNodeID nodeid = 0; nodeid < node_table.nodes.size(); nodeid ++) {
 
 		if (m.data) delete[] m.data;
 		m.type = MSG_MANAGE_REPLY;
@@ -142,24 +144,24 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 		}
 
 		if (nodeid == sid) continue;
-		fd = openfd(storage_node_addr(nodeid).data());
-		if (fd<0){
+		int fd2 = openfd(storage_node_addr(nodeid).data());
+		if (fd2<0){
 			perror("wrong fd\n");
 		}
-		m.send(fd, m.data);
-		m.print("--Manager: Send to node---\n");
-
-		m.set_intervals(donate_info[nodeid]);
-		m.send(fd, m.data);
-		m.print("--Manager: Send intervals to node---\n");
-		close(fd);
+		m.send(fd2, m.data);
+		if (node_table.nodes.size() > CONFIG_N){
+			m.set_intervals(donate_info[nodeid]);
+			m.send(fd2, m.data);
+		}
+		close(fd2);
 	}
 
 	if (m.data) delete[] m.data;
 	fprintf(stderr, "<<< %s: Exiting\n", __func__);
 
 
-
+	m.recv(fd);
+	close(fd);
 	return 0;
 }
 

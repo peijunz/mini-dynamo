@@ -1,6 +1,5 @@
 #include "gtstore.hpp"
 
-
 void GTStoreStorage::init(int num_vnodes) {
 	// TODO: Contact Manager to get global data
 
@@ -17,8 +16,9 @@ void GTStoreStorage::init(int num_vnodes) {
 	m.length = sprintf(m.data, "%d", num_vnodes);
 	m.owner = "GTStoreStorage::init";
     m.send(fd, m.data);
-
+	printf("Sent request to manager\n");
     m.recv(fd);
+	printf("Sent reply to manager\n");
 	if (m.type & ERROR_MASK){
 		printf("No available node\n");
 		exit(1);
@@ -69,6 +69,12 @@ void GTStoreStorage::init(int num_vnodes) {
 		perror("listen failed");
 		exit(1);
 	}
+
+
+    m.length = 0;
+	m.type = 0;
+	m.send(fd);
+
 	cout << "Inside GTStoreStorage::init()\n";
 	if (node_table.nodes.size() > CONFIG_N)
 		collect_tokens();
@@ -82,6 +88,7 @@ void GTStoreStorage::init(int num_vnodes) {
 
 
 void GTStoreStorage::collect_tokens(){
+	printf(">>> Collecting tokens...\n");
 	int todo = CONFIG_N;
 	int connfd;
 	vector<pair<int, int>> intervals;
@@ -108,6 +115,7 @@ void GTStoreStorage::collect_tokens(){
 		}
 		todo--;
 	}
+	printf("<<< Done Collecting tokens...\n");
 
 }
 
@@ -146,6 +154,10 @@ StorageNodeID GTStoreStorage::find_coordinator(string key) {
 // 	return false;
 // }
 
+void GTStoreStorage::leave() {
+	return;
+}
+
 void GTStoreStorage::exec() {
 
 	int connfd;
@@ -155,7 +167,7 @@ void GTStoreStorage::exec() {
         	perror("Accept fail");
 		}
 		Message m;
-		m.owner = __func__;
+		m.owner = string("storage_") + __func__;
 		m.recv(connfd);
 		if (m.type & CLIENT_MASK) {
 			// Because client does not listen, we do not
@@ -189,6 +201,7 @@ void GTStoreStorage::exec() {
 
 bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	// Find coordinator and forward request
+	assert(node_table.nodes.size() >= CONFIG_N);
 	int offset = strnlen(m.data, m.length)+1;
 	char *val = m.data + offset;
 	StorageNodeID sid = find_coordinator(m.data);
@@ -380,7 +393,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	m.owner = __func__;
 	// a new node with id==m.node_id joins
 	printf(">>> GTStoreStorage::process_manage_reply: Entering");
-	m.print("--Get MSG from MANAGER--\n");
+	m.owner = to_string(id) + __func__;
 	node_table.nodes.insert(m.node_id);
 	int num_vnodes;
 	char*cur=m.data;
@@ -389,50 +402,54 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	vector<VirtualNodeID> vvid(num_vnodes);
 	printf ("\t%d join, %d vnodes\n", m.node_id, num_vnodes);
 	printf ("\t%.*s\n", m.length, m.data);
+	assert(m.length);
 	for (int i=0; i<num_vnodes; i++) {
 		sscanf(cur, "%d", &vvid[i]);
 		cur += strnlen(cur, 24)+1;
 	}
 	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
 
-	m.recv(fd);
-	m.print("\t--- Get Intervals from manager ----\n");
-	vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
-	fprintf(stderr, "\t\t%d\n", intervals.size());
-	close(fd);
+	if (node_table.nodes.size() > CONFIG_N){
+		m.recv(fd);
+		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
+		fprintf(stderr, "\t\t%d\n", intervals.size());
 
-	int bootfd = openfd(storage_node_addr(m.node_id).data());
-	if (bootfd < 0){
-		perror("ERROR: connect boot fail");
-		exit(1);
-	}
-	m.type = MSG_DONATE_REQUEST;
-	m.send(bootfd, m.data);
-	m.print("\t[[[  Donate  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
-	vector<pair<string, Data>> kvlist;
-	for (int i=0; i<intervals.size(); i++){
-		// Extract kv list
-		auto it = data.upper_bound(intervals[i].first);
-		if (it == data.end()) it = data.begin();
-		if (it != data.end()) {
-			for (auto jt=it->second. begin(); jt != it->second.end(); ) {
-				if (node_table.find_virtual_node(jt->first) == intervals[i].second) {
-					kvlist.push_back(*jt);
-					jt = it->second.erase(jt);
+		int bootfd = openfd(storage_node_addr(m.node_id).data());
+		if (bootfd < 0){
+			perror("ERROR: connect boot fail");
+			exit(1);
+		}
+		m.type = MSG_DONATE_REQUEST;
+		m.send(bootfd, m.data);
+		m.print("\t[[[  Donate  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
+		vector<pair<string, Data>> kvlist;
+
+		for (int i=0; i<intervals.size(); i++){
+			// Extract kv list
+			auto it = data.upper_bound(intervals[i].first);
+			if (it == data.end()) it = data.begin();
+			if (it != data.end()) {
+				for (auto jt=it->second. begin(); jt != it->second.end(); ) {
+					if (node_table.find_virtual_node(jt->first) == intervals[i].second) {
+						kvlist.push_back(*jt);
+						jt = it->second.erase(jt);
+					}
 				}
 			}
-		}
-		fprintf(stderr, "00000000000000000000  Get kv list: size=%d\n", kvlist.size());
+			fprintf(stderr, "00000000000000000000  Get kv list: size=%d\n", kvlist.size());
 
-		// Send
-		m.type = MSG_DONATE_REQUEST;
-		m.set_kv_list(kvlist);
-		m.print("\t[[[  Donate  Data in interval  ]]] \n");
-		m.send(bootfd, m.data);
-		m.print("\t[[[  Donate  Data in interval  ]]] \n");
-		kvlist.clear();
+			// Send
+			m.type = MSG_DONATE_REQUEST;
+			m.set_kv_list(kvlist);
+			m.print("\t[[[  Donate  Data in interval  ]]] \n");
+			m.send(bootfd, m.data);
+			m.print("\t[[[  Donate  Data in interval  ]]] \n");
+			kvlist.clear();
+		}
 	}
-	close(bootfd);
+	
+	close(fd);
+
 	// no enough nodes
 	// if (node_table.nodes.size() <= CONFIG_N) {
 	// 	return true;
@@ -445,9 +462,25 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	return true;
 }
 
-int main(int argc, char **argv) {
 
-	GTStoreStorage storage;
+GTStoreStorage storage;
+
+static void _sig_handler(int signo) {
+    if(signo == SIGINT || signo == SIGTERM) {
+		storage.leave();
+    }
+}
+
+int main(int argc, char **argv) {
+    if(SIG_ERR == signal(SIGINT, _sig_handler)) {
+        fprintf(stderr, "Unable to catch SIGINT...exiting.\n");
+        exit(1);
+    }
+
+    if(SIG_ERR == signal(SIGTERM, _sig_handler)) {
+        fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
+        exit(1);
+    }
 	storage.init();
 	storage.exec();
 }
