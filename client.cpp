@@ -197,54 +197,84 @@ int Message::get_key_data(string& key, Data& data) {
 }
 
 
-	int Message::set_kv_list(vector<pair<string, Data>>& kvs){
-		int bufsize = 32;
-		for (auto &x:kvs){
-			bufsize += 1+x.first.size()+x.second.get_length();
-		}
+int Message::set_kv_list(vector<pair<string, Data>>& kvs){
+	int bufsize = 32;
+	for (auto &x:kvs){
+		bufsize += 1+x.first.size()+x.second.get_length();
+	}
+
+	if (this->data) delete[] this->data;
+	this->data = new char[bufsize];
+	length = 0;
+	// Serialization
+	length += 1 + sprintf(this->data + length, "%d", kvs.size());
+	for (auto &x:kvs){
+		strcpy(this->data+length, x.first.data());
+		length += 1 + x.first.size();
+
+		length += 1 + sprintf(this->data + length, "%lld", x.second.version);
+
+		strcpy(this->data + length, x.second.value.data());
+		length += 1 + x.second.value.size();
+	}
+	return length;
+}
+
+vector<pair<string, Data>> Message::get_kv_list(){
+	vector<pair<string, Data>> kvs;
+	int n=0;
+	string key;
+	Data data;
+	char *cur=this->data;
+
+	sscanf(cur, "%d", &n);
+	cur += 1+strlen(cur);
+
+	for (int i=0; i<n; i++){
+		key = cur;
+		cur += 1+strlen(cur);
+
+		sscanf(cur, "%lld", &data.version);
+		cur += 1+strlen(cur);
+
+		data.value = cur;
+		cur += 1+strlen(cur);
+
+		kvs.push_back({key, data});
+	}
+	return kvs;
+}
+
+
+int Message::set_intervals(vector<pair<VirtualNodeID, VirtualNodeID>>& intervals){
+	
+		int bufsize = (1+intervals.size())*32;
 
 		if (this->data) delete[] this->data;
 		this->data = new char[bufsize];
 		length = 0;
 		// Serialization
-		length += 1 + sprintf(this->data + length, "%d", kvs.size());
-		for (auto &x:kvs){
-			strcpy(this->data+length, x.first.data());
-			length += 1 + x.first.size();
-
-			length += 1 + sprintf(this->data + length, "%lld", x.second.version);
-
-			strcpy(this->data + length, x.second.value.data());
-			length += 1 + x.second.value.size();
+		length += 1 + sprintf(this->data + length, "%d", intervals.size());
+		for (auto &x:intervals){
+			length += 1 + sprintf(this->data + length, "%d %d", x.first);
 		}
 		return length;
-	}
-	vector<pair<string, Data>> Message::get_kv_list(){
-		vector<pair<string, Data>> kvs;
-		int n=0;
-		string key;
-		Data data;
-		char *cur=this->data;
+}
+vector<pair<VirtualNodeID, VirtualNodeID>> Message::get_intervals(){
+	vector<pair<VirtualNodeID, VirtualNodeID>> intervals;
+	int n=0, i, j;
+	char *cur=this->data;
 
-		sscanf(cur, "%d", &n);
+	sscanf(cur, "%d", &n);
+	cur += 1+strlen(cur);
+
+	for (int i=0; i<n; i++){
+		sscanf(cur, "%d %d", &i, &j);
 		cur += 1+strlen(cur);
-
-		for (int i=0; i<n; i++){
-			key = cur;
-			cur += 1+strlen(cur);
-
-			sscanf(cur, "%lld", &data.version);
-			cur += 1+strlen(cur);
-
-			data.value = cur;
-			cur += 1+strlen(cur);
-
-			kvs.push_back({key, data});
-		}
-		return kvs;
+		intervals.push_back({i, j});
 	}
-
-
+	return intervals;
+}
 
 
 

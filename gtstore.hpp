@@ -93,8 +93,12 @@ struct Message {
 
 	int set_key_data(string key, Data data);
 	int get_key_data(string& key, Data& data);
+
 	int set_kv_list(vector<pair<string, Data>>&);
 	vector<pair<string, Data>> get_kv_list();
+
+	int set_intervals(vector<pair<VirtualNodeID, VirtualNodeID>>& intervals);
+	vector<pair<VirtualNodeID, VirtualNodeID>> get_intervals();
 };
 
 
