@@ -334,14 +334,13 @@ val_t GTStoreClient::get(string key) {
 	m.recv(fd);
 	m.get_key_data(key, data);
 	cout << ">>> Inside GTStoreClient::get() for client: " << client_id << " key: " << key << " value: "<<data.value<< "\n";
-	val_t value;
 	// Get the value!
 	
 	close(fd);
-	return value;
+	return data.value;
 }
 
-bool GTStoreClient::put(string key, string value) {
+bool GTStoreClient::put(string key, val_t value) {
 	// Attempt to find its contact
 	// If failed, then ask manager for a new contact
 
