@@ -49,7 +49,7 @@ void GTStoreStorage::init(int num_vnodes) {
 	}
 	printf("\n");
 
-	printf ("Successfully add to manager!  Node ID = %d\n", id);
+	printf ("Successfully add self to manager!  Node ID = %d\n", id);
 
 	int size;
 	struct sockaddr_un un;
@@ -70,11 +70,12 @@ void GTStoreStorage::init(int num_vnodes) {
 		exit(1);
 	}
 	cout << "Inside GTStoreStorage::init()\n";
-	if (node_table.storage_nodes.size() > CONFIG_N)
+	if (node_table.nodes.size() > CONFIG_N)
 		collect_tokens();
 
     m.length = 0;
 	m.send(fd);
+	fprintf(stderr, "\t----ACK sent----\n");
 	close(fd);
 }
 
@@ -376,8 +377,10 @@ bool GTStoreStorage::process_donate_request(Message& m) {
 
 bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
+	m.owner = __func__;
 	// a new node with id==m.node_id joins
 	printf(">>> GTStoreStorage::process_manage_reply: Entering");
+	m.print("--Get MSG from MANAGER--\n");
 	node_table.nodes.insert(m.node_id);
 	int num_vnodes;
 	char*cur=m.data;
@@ -393,7 +396,9 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
 
 	m.recv(fd);
+	m.print("\t--- Get Intervals from manager ----\n");
 	vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
+	fprintf(stderr, "\t\t%d\n", intervals.size());
 	close(fd);
 
 	int bootfd = openfd(storage_node_addr(m.node_id).data());
@@ -401,7 +406,9 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		perror("ERROR: connect boot fail");
 		exit(1);
 	}
+	m.type = MSG_DONATE_REQUEST;
 	m.send(bootfd, m.data);
+	m.print("\t[[[  Donate  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 	vector<pair<string, Data>> kvlist;
 	for (int i=0; i<intervals.size(); i++){
 		// Extract kv list
@@ -415,11 +422,14 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 				}
 			}
 		}
+		fprintf(stderr, "00000000000000000000  Get kv list: size=%d\n", kvlist.size());
 
 		// Send
 		m.type = MSG_DONATE_REQUEST;
 		m.set_kv_list(kvlist);
+		m.print("\t[[[  Donate  Data in interval  ]]] \n");
 		m.send(bootfd, m.data);
+		m.print("\t[[[  Donate  Data in interval  ]]] \n");
 		kvlist.clear();
 	}
 	close(bootfd);
@@ -430,7 +440,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
 
 
-	printf ("<<< Successfully add to manager!  Node ID = %d\n", id);
+	printf ("\n<<< Successfully add a new node !  Node ID = %d, New Node ID = %d\n", id, m.node_id);
 
 	return true;
 }

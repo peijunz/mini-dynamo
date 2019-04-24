@@ -42,7 +42,7 @@ int main() {
         children.push_back(pid);
     }
     sleep(1);
-    for (int i=0; i<4; i++){
+    for (int i=0; i<0; i++){
         if ((pid = Fork()) == 0) {
             printf("========================\n");
             printf("=== Running Client %d...\n", i);

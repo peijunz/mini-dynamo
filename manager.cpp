@@ -67,17 +67,21 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	}
 	m.owner = __func__;
 	m.send(fd, m.data);
+	fprintf(stderr, "\t----Sent to new node---\n");
 	m.recv(fd);
+	fprintf(stderr, "\t----Got ACK from new node---\n");
 	close(fd);
 	
 	// compute donate information
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>> >	donate_info;
 	if (node_table.nodes.size() > CONFIG_N) {
+		fprintf(stderr, "start computing....... total: %u\n", vvid.size());
 		for (VirtualNodeID vid : vvid) {
+			fprintf(stderr, "\tcomputing.......%u\n", vid);
 			// head: k previous
 			auto& vnodes = node_table.virtual_nodes;
 			auto& snodes = node_table.storage_nodes;
-			auto new_node = vnodes.find(vid);
+			auto new_node = vnodes.find(node_table.consistent_hash(virtual_node_addr(vid)));
 			auto it = new_node;
 			unordered_map<VirtualNodeID, int> count;
 			while (count.size() < CONFIG_N) {
@@ -97,6 +101,8 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 				count[snodes[jt->second]] ++;
 			}
 			
+			fprintf(stderr, "\t\tset head and tail\n");
+
 			while (it != new_node) {
 				VirtualNodeID vid_start = it->second;
 
@@ -110,6 +116,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 				StorageNodeID sid_donate = snodes[jt->second];
 
 				donate_info[sid_donate].push_back({vid_start, vid_end});
+				fprintf(stderr, "\t\t||||----Donate: %d, [%d, %d)----||||\n", sid_donate, vid_start, vid_end);
 
 				while (count.size() < CONFIG_N+1) {
 					jt ++;
@@ -122,7 +129,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	}
 
 	// broadcast to old nodes
-	printf("\t%s: Broadcast to storage nodes %s\n", __func__);
+	fprintf(stderr, "\t%s: Broadcast to storage nodes\n", __func__);
 
 	for (StorageNodeID nodeid = 0; nodeid < node_table.num_storage_nodes; nodeid ++) {
 
@@ -140,13 +147,16 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 			perror("wrong fd\n");
 		}
 		m.send(fd, m.data);
+		m.print("--Manager: Send to node---\n");
+
 		m.set_intervals(donate_info[nodeid]);
 		m.send(fd, m.data);
+		m.print("--Manager: Send intervals to node---\n");
 		close(fd);
 	}
 
 	if (m.data) delete[] m.data;
-	printf("<<< %s: Exiting\n", __func__);
+	fprintf(stderr, "<<< %s: Exiting\n", __func__);
 
 
 

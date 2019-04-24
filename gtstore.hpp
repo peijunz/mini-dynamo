@@ -23,9 +23,9 @@ using namespace std;
 typedef string val_t;
 
 #define CONFIG_V	3
-#define CONFIG_N	5
-#define CONFIG_R	3
-#define CONFIG_W	3
+#define CONFIG_N	3
+#define CONFIG_R	2
+#define CONFIG_W	2
 
 #define MAX_ID_LENGTH	32
 #define MAX_KEY_LENGTH	20
