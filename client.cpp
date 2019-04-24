@@ -62,8 +62,11 @@ int read_line(int fd, char* buf, size_t n, int *loc) {
 		if((nread = read(fd, buf, rem)) < 0) {
 			if(errno == EINTR)
 				nread = 0;
-			else
+			else{
+				perror("read fail");
+				printf("Cache: %.*s\n", n-rem, buf-(n-rem));
 				return -1;
+			}
 		} else if(nread == 0)
 			break;
 		rem -= (size_t)nread;
@@ -97,8 +100,9 @@ int Message::send(int fd, const char *content){
 		printf("Write error\n");
 		exit(-1);
 	}
+	assert((length>0) ^ (content==NULL));
 	if (content){
-		if (rio_writen(fd, content, length) == -1){
+		if (rio_writen(fd, content, length) != length){
 			printf("Write error\n");
 			exit(-1);
 		}
@@ -141,6 +145,7 @@ Message::~Message(){
 }
 
 void Message::print(){
+<<<<<<< HEAD
 	fprintf(stderr, "%d %d %d %ld\n", type, client_id, node_id, length);
 	if (length && data){
 		char *buf = new char[length];
@@ -149,6 +154,18 @@ void Message::print(){
 			if (buf[i]=='\0') buf[i]='_';
 		buf[length] = '\0';
 		fprintf(stderr, "%.*s\n\n", (int)length, buf);
+=======
+
+	printf("Message Header: %d %d %d %ld\n", type, client_id, node_id, length);
+	if (length && data){
+		char*buf=new char[length+1];
+		buf[length] = 0;
+		memcpy(buf, data, length);
+		for(char*p=buf; p<buf + length; p++){
+			if (*p==0) *p='_';
+		}
+		printf("%.*s\n\n", (int)length, buf);
+>>>>>>> af80d48696689dc0a8b04594c06831ce54aaf095
 		delete[] buf;
 	}
 };
@@ -159,13 +176,19 @@ int Message::set_key_data(string key, Data data) {
 	length = MAX_KEY_LENGTH+1 + data.get_length();
 	if (this->data) delete[] this->data;
 	this->data = new char[length];
-	snprintf(this->data, MAX_KEY_LENGTH+1, "%s", key.data());
-	sprintf(this->data + MAX_KEY_LENGTH+1, "%lld %s\n", data.version, data.value.data());
+	strncpy(this->data, key.data(), MAX_KEY_LENGTH+1);
+	sprintf(this->data + MAX_KEY_LENGTH+1, "%lld", data.version);
+	strncpy(this->data + MAX_KEY_LENGTH + 1 + 64 + 1, data.value.data(), data.value.size()+1);
 	return 0;
 }
 int Message::get_key_data(string& key, Data& data) {
-	sscanf(this->data, "%.*s", MAX_KEY_LENGTH+1, key.data());
-	sscanf(this->data + MAX_KEY_LENGTH+1, "%lld %s\n", &data.version, &data.value);
+	printf("Entered get kv\n");
+	// char buf[MAX_KEY_LENGTH+1];
+	// buf[MAX_KEY_LENGTH] = 0;
+	key = this->data;
+	sscanf(this->data + MAX_KEY_LENGTH+1, "%lld", &data.version);
+	data.value = this->data + MAX_KEY_LENGTH + 1 + 64 + 1;
+	printf("Exited get kv\n");
 	return 0;
 }
 
