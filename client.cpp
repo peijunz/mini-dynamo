@@ -95,6 +95,8 @@ string typestr(int type){
 		s += "_WR";
 	if (type & REPLY_MASK)
 		s += "_REP";
+	if (type & DONATE_MASK)
+		s += "_DNT";
 	if (type & ERROR_MASK)
 		s += "_ERR";
 	return s;
@@ -237,6 +239,19 @@ VirtualNodeID NodeTable::find_virtual_node(string key) {
 	return it->second;
 }
 
+VirtualNodeID NodeTable::find_neighbor_virtual_node(VirtualNodeID vid) {
+
+	size_t hash_key = consistent_hash("virtual_node_" + to_string(vid));
+	StorageNodeID sid = storage_nodes[vid];
+	auto it0 = virtual_nodes.find(hash_key);
+	auto it = it0;
+	do {
+		if (storage_nodes[it->second] != sid)
+			return it->second;
+	} while (++it != it0);
+
+	return -1;	
+}
 vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
 	size_t hash_key = consistent_hash(key);
 	auto it = virtual_nodes.upper_bound(hash_key);
@@ -329,13 +344,9 @@ val_t GTStoreClient::get(string key) {
 	int fd = connect_contact_node();
 		m.owner = __func__;
 	m.send(fd, m.data);
-	fprintf(stderr, "---------------Client send---------------------\n");
-	m.print();
 
 	// receive data
 	m.recv(fd);
-	fprintf(stderr, "---------------Client receive---------------------\n");
-	m.print();
 	m.get_key_data(key, data);
 	cout << ">>> Inside GTStoreClient::get() for client: " << client_id << " key: " << key << " value: "<<data.value<< "\n";
 	// Get the value!
@@ -360,16 +371,9 @@ bool GTStoreClient::put(string key, val_t value) {
 	int fd = connect_contact_node();
 		m.owner = __func__;
 	m.send(fd, m.data);
-	fprintf(stderr, "---------------Client send---------------------\n");
-	m.print();
 
 	// receive data
-	do {
-		m.recv(fd);
-		//fprintf(stderr, "---------------Client receive---------------------\n");
-		//m.print();
-	} while (!(m.type & REPLY_MASK));
-
+	m.recv(fd);
 	close(fd);
 	assert(m.type==MSG_CLIENT_REPLY);
 	cout << ">>> Inside GTStoreClient::put() for client: " << client_id << " key: " << key << " value: " << value << "\n";

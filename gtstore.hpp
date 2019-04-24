@@ -49,8 +49,8 @@ public:
 #define MANAGE_MASK 1<<3
 #define WRITE_MASK 1<<4
 #define REPLY_MASK 1<<5
+#define DONATE_MASK 1<<6
 #define ERROR_MASK 1<<8
-
 
 
 typedef int VirtualNodeID;
@@ -66,6 +66,7 @@ typedef enum {
 	MSG_FORWARD_REPLY = FORWARD_MASK | REPLY_MASK,
 	MSG_COORDINATE_REQUEST = COOR_MASK,
 	MSG_COORDINATE_REPLY = COOR_MASK | REPLY_MASK,
+	MSG_DONATE_REQUEST
 } message_type_t;
 
 string typestr(int type);
@@ -113,8 +114,6 @@ public:
 
 
 class NodeTable {
-private:
-
 public:
 	hash<string>	consistent_hash;			// hash<string>(s)
 
@@ -132,6 +131,7 @@ public:
 	void add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid);
 
 	VirtualNodeID find_virtual_node(string key);
+	VirtualNodeID find_neighbor_virtual_node(VirtualNodeID);
 
 	vector<pair<VirtualNodeID, StorageNodeID>> get_preference_list(string key, int size=1);
 
@@ -170,6 +170,8 @@ public:
 
 	void init(int num_vnodes=CONFIG_V);
 
+	void steal_token(VirtualNodeID);
+
 	// data functions
 	bool read_local(string key, Data& data);
 	bool write_local(string key, Data data);
@@ -193,6 +195,7 @@ public:
 	bool process_coordinate_request(Message& msg);
 	bool process_coordinate_reply(Message& msg);
 	bool finish_coordination(Message &m, string &key);
+	bool process_donate_request(Message &m);
 };
 
 #endif

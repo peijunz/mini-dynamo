@@ -40,8 +40,20 @@ void GTStoreStorage::init(int num_vnodes) {
 		node_table.add_virtual_node(vid);
 		node_table.storage_nodes.insert({vid, sid});
 		printf ("{%d, %d}\t", vid, sid);
+		if (sid == id) {
+			// my virtual node
+			data.insert({vid, {}});
+		}
 	}
 	printf("\n");
+
+/////////////	steal token from other nodes
+	for (auto& d : data) {
+		vid = d.first;
+		steal_token(vid);
+	}
+
+
 
 	printf ("Successfully add to manager!  Node ID = %d\n", id);
 
@@ -69,6 +81,9 @@ void GTStoreStorage::init(int num_vnodes) {
 	m.send(fd);
 	close(fd);
 }
+
+
+
 
 bool GTStoreStorage::read_local(string key, Data& data) {
 	VirtualNodeID v_id = node_table.find_virtual_node(key);
@@ -129,7 +144,7 @@ void GTStoreStorage::exec() {
 		else{
 			// Communication between storage nodes, sockets are disposable
 			close(connfd);
-			switch (m.type & (FORWARD_MASK|COOR_MASK|REPLY_MASK))
+			switch (m.type & (FORWARD_MASK|COOR_MASK|REPLY_MASK|DONATE_MASK))
 			{
 				case MSG_FORWARD_REPLY:
 					process_forward_reply(m);
@@ -142,6 +157,9 @@ void GTStoreStorage::exec() {
 					break;
 				case MSG_COORDINATE_REQUEST:
 					process_coordinate_request(m);
+					break;
+				case MSG_DONATE_REQUEST:
+					process_donate_request(m);
 					break;
 			}
 		}
@@ -179,9 +197,6 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 	string key;
 	Data data;
 	m.get_key_data(key, data);
-
-	fprintf(stderr, "unpack: %s\n", key.data());
-
 	auto pref_list = node_table.get_preference_list(key, CONFIG_N);
 
 	// initialize task
@@ -220,29 +235,6 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 		((m.type & WRITE_MASK) ? CONFIG_W : CONFIG_R))
 	{
 		finish_coordination(m, key);
-		printf("No need to broadcast\n");
-		return 0;
-	}
-	else{
-		// ask other nodes to complete their work
-		for (auto& pref : pref_list) {
-			printf("Broadcast...\n");
-			m.type = MSG_COORDINATE_REQUEST | (m.type & WRITE_MASK);
-			string coordinator_addr = node_addr + "_" + to_string(pref.second);
-			int nodefd = openfd(coordinator_addr.data());
-			if (nodefd < 0){
-				printf("nodefd");
-				exit(1);
-			}
-			m.owner = __func__;
-			m.send(nodefd, m.data);
-			close(nodefd);
-		}
-		m.owner = __func__;
-		m.send(nodefd, m.data);
-		//m.recv(nodefd);
-		close(nodefd);
-
 		printf("\tNo need to broadcast\n");
 	}
 
@@ -354,6 +346,12 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 	return false;
 }
 
+bool GTStoreStorage::process_donate_request(Message& m) {
+	/////// TODO:
+	
+}
+
+
 bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
 	// a new node with id==m.node_id joins
@@ -376,6 +374,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 
 	return true;
 }
+
 int main(int argc, char **argv) {
 
 	GTStoreStorage storage;
