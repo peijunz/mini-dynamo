@@ -178,7 +178,7 @@ bool GTStoreStorage::process_forward_request(Message& m, int fd) {
 	Data data;
 	m.get_key_data(key, data);
 
-	fprintf(stderr, "unpack: %s\n", key);
+	fprintf(stderr, "unpack: %s\n", key.data());
 
 	auto pref_list = node_table.get_preference_list(key, CONFIG_N);
 
@@ -223,6 +223,8 @@ bool GTStoreStorage::process_forward_reply(Message& m, int fd) {
 	m.type = MSG_CLIENT_REPLY;
 	m.owner = __func__;
 	m.send(clientfd, m.data);
+	fprintf(stderr, "---------------Send result to Client---------------------\n");
+	m.print();
 	//m.recv(clientfd);
 	close(clientfd);
 	forward_tasks.erase(m.client_id);

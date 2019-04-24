@@ -145,16 +145,6 @@ Message::~Message(){
 }
 
 void Message::print(){
-<<<<<<< HEAD
-	fprintf(stderr, "%d %d %d %ld\n", type, client_id, node_id, length);
-	if (length && data){
-		char *buf = new char[length];
-		memcpy(buf, data, length);
-		for (int i=0; i<length-1; i++)
-			if (buf[i]=='\0') buf[i]='_';
-		buf[length] = '\0';
-		fprintf(stderr, "%.*s\n\n", (int)length, buf);
-=======
 
 	printf("Message Header: %d %d %d %ld\n", type, client_id, node_id, length);
 	if (length && data){
@@ -165,7 +155,6 @@ void Message::print(){
 			if (*p==0) *p='_';
 		}
 		printf("%.*s\n\n", (int)length, buf);
->>>>>>> af80d48696689dc0a8b04594c06831ce54aaf095
 		delete[] buf;
 	}
 };
@@ -328,9 +317,12 @@ val_t GTStoreClient::get(string key) {
 	int fd = connect_contact_node();
 		m.owner = __func__;
 	m.send(fd, m.data);
+	fprintf(stderr, "---------------Client send---------------------\n");
+	m.print();
 
 	// receive data
 	m.recv(fd);
+	fprintf(stderr, "---------------Client receive---------------------\n");
 	m.print();
 	m.get_key_data(key, data);
 	cout << "Inside GTStoreClient::get() for client: " << client_id << " key: " << key << "\n";
@@ -357,10 +349,15 @@ bool GTStoreClient::put(string key, string value) {
 	int fd = connect_contact_node();
 		m.owner = __func__;
 	m.send(fd, m.data);
+	fprintf(stderr, "---------------Client send---------------------\n");
+	m.print();
 
 	// receive data
-	m.recv(fd);
-	m.print();
+	do {
+		m.recv(fd);
+		//fprintf(stderr, "---------------Client receive---------------------\n");
+		//m.print();
+	} while (!(m.type & REPLY_MASK));
 
 	close(fd);
 	assert(("not a reply for client", m.type & MSG_CLIENT_REPLY));
