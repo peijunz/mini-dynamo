@@ -126,3 +126,11 @@ The client request manager for a contact node during initialization. We call thi
 
 # References
 + Stevens, W. Richard, and Stephen A. Rago. Advanced programming in the UNIX environment. Addison-Wesley, 2008.
+
+
+
+
+
+
+
+0 1 2 3 4 5 5 5 4 3 2 1 0
