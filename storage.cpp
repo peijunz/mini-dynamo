@@ -200,6 +200,7 @@ void GTStoreStorage::collect_tokens(int todo){
 		for (auto& kv : kvlist) {
 			//VirtualNodeID vid = find_global_virtual_node(kv.first);
 			VirtualNodeID vid = find_local_virtual_node(kv.first);
+			assert (m.client_id == node_table.get_preference_list(kv.first, CONFIG_N + 1).back().second);
 			this->data[vid].insert(kv);
 		}
 		todo--;
@@ -500,7 +501,9 @@ bool GTStoreStorage::process_donate_request(Message& m) {
 	for (auto& kv : kvlist) {
 		//VirtualNodeID vid = find_global_virtual_node(kv.first);
 		VirtualNodeID vid = find_local_virtual_node(kv.first);
-		//assert (this->data[vid].count(kv.first)==0);
+		if (this->data[vid].count(kv.first)!=0) {
+			fprintf(stderr, "---------Duplicate Data on Node %d: %s ---------\n", id, kv.first.data());
+		}
 		this->data[vid].insert(kv);
 	}
 	fprintf(stderr, "After accept donation from %d:", m.client_id);

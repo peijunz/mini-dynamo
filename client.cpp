@@ -349,6 +349,8 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 		}
 		it++;
 	}
+
+	//print
 	return pref_list;
 }
 
