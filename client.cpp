@@ -45,8 +45,10 @@ ssize_t rio_readn(int fd, char* buf, size_t n) {
 		if((nread = read(fd, buf, rem)) < 0) {
 			if(errno == EINTR)
 				nread = 0;
-			else
+			else{
+				perror("rio_read");
 				return -1;
+			}
 		} else if(nread == 0)
 			break;
 		rem -= (size_t)nread;

@@ -68,7 +68,7 @@ int main() {
         fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
         exit(1);
     }
-    sleep(3);
+    sleep(10);
     _sig_handler(SIGINT);
     return 0;
 }
