@@ -3,7 +3,7 @@ LFLAGS  =
 CC      = g++
 RM      = /bin/rm -rf
 
-TESTS = manager storage test_socket test_app
+TESTS = manager storage test_app
 OBJS =  client.o
 
 all: $(TESTS)
@@ -22,6 +22,3 @@ test_app: $(OBJS)
 
 clean:
 	$(RM) *.o $(TESTS) *.socket*
-
-test_socket: $(OBJS)
-	$(CC) $(CPPFLAGS) $(OBJS) test_socket.cpp -o test_socket
