@@ -102,6 +102,7 @@ void GTStoreStorage::collect_tokens(){
     	if (connfd == -1) {
         	perror("Accept fail");
 		}
+		printf("\tGot token, todo=%d\n", todo);
 		Message m;
 		m.owner = __func__;
 		m.recv(connfd);

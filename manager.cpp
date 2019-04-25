@@ -44,7 +44,7 @@ int GTStoreManager::manage_client_request(Message &m, int fd){
 }
 unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>>
 GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
-	printf(">>> %s: Enterng\n", __func__);
+
 	// compute donate information
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>> >	donate_info;
 	for (VirtualNodeID vid : vvid) {
@@ -97,10 +97,8 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			}
 		}
 	}
-	printf("<<< %s: Exiting\n", __func__);
 	return donate_info;
 }
-
 int GTStoreManager::manage_node_request(Message &m, int fd){
 	// Manage entrance and exit status of nodes
 	int num_new_vnodes;
@@ -125,9 +123,8 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	}
 	m.owner = __func__;
 	m.send(fd, m.data);
-	printf("Before recv\n");
 	m.recv(fd);
-	printf("After recv\n");
+	
 	// TODO
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>> donate_info;
 	if (node_table.nodes.size() > CONFIG_N) {
