@@ -34,7 +34,7 @@ int main() {
     }
     children.push_back(manager_id);
     sleep(1);
-    for (int i=0; i<10; i++){
+    for (int i=0; i<5; i++){
         if ((pid = Fork()) == 0) {
             printf("========================\n");
             printf("=== Starting Storage Node %d...\n", i);
@@ -46,17 +46,32 @@ int main() {
         children.push_back(pid);
     }
     sleep(1);
-    for (int i=0; i<0; i++){
-        if ((pid = Fork()) == 0) {
+    for (int i=0; i<60; i++){
+        if (i&1) {
+
+            if ((pid = Fork()) == 0) {
+                printf("========================\n");
+                printf("=== Starting Storage Node %d...\n", i);
+                execve("./storage", args, env);
+                return 0;
+            }
+            usleep(300000);
             printf("========================\n");
-            printf("=== Running Client %d...\n", i);
-            GTStoreClient client;
-            client.init(i);
-            client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
-            client.get("test_key_"+to_string(i));
-            return 0;
+            children.push_back(pid);
+        } else {
+            //continue;
+            if ((pid = Fork()) == 0) {
+                printf("========================\n");
+                printf("=== Running Client %d...\n", i);
+                GTStoreClient client;
+                client.init(i);
+                client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
+                client.get("test_key_"+to_string(i));
+                return 0;
+            }
+            children.push_back(pid);
         }
-        children.push_back(pid);
+        //sleep(1);
     }
 
     if(SIG_ERR == signal(SIGINT, _sig_handler)) {
@@ -68,7 +83,7 @@ int main() {
         fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
         exit(1);
     }
-    sleep(3);
+    sleep(15);
     _sig_handler(SIGINT);
     return 0;
 }

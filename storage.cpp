@@ -80,7 +80,7 @@ void GTStoreStorage::init(int num_vnodes) {
 
 	printf("Inside GTStoreStorage::init() nodes %ld/%d\n", node_table.nodes.size(), CONFIG_N);
 	if (node_table.nodes.size() > CONFIG_N)
-		collect_tokens();
+		collect_tokens(m.coordinator_id);
 
     m.length = 0;
 	// m.node_id = -2;
@@ -92,9 +92,8 @@ void GTStoreStorage::init(int num_vnodes) {
 
 
 
-void GTStoreStorage::collect_tokens(){
+void GTStoreStorage::collect_tokens(int todo){
 	printf(">>> Collecting tokens...\n");
-	int todo = CONFIG_N;
 	int connfd;
 	vector<pair<int, int>> intervals;
 	vector<pair<string, Data>> kvlist;
@@ -188,7 +187,7 @@ void GTStoreStorage::exec() {
 			// close client until we got a reply at process_forward_reply
 			process_client_request(m, connfd);
 		}
-		else if (m.type & MSG_MANAGE_REPLY){
+		else if (m.type & MANAGE_MASK){
 			process_manage_reply(m, connfd);
 		}
 		else{
@@ -288,7 +287,7 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 	}
 
 	// printf("SIZE of working tasks for node %d is %d\n", id, working_tasks.size());
-	printf("<<< Exited process_forward_request with todo=%d\n", working_tasks[m.client_id].first);
+	printf("<<< Exited process_forward_request with received=%d\n", working_tasks[m.client_id].first);
 	return false;
 }
 
@@ -469,9 +468,6 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 
 		// assert (intervals.size()!=0);
 
-		if (intervals.size() == 0) {
-			return false;
-		}
 
 		int bootfd = openfd(storage_node_addr(m.node_id).data());
 		if (bootfd < 0){
@@ -482,15 +478,21 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		//m.send(bootfd, m.data);
 		vector<pair<string, Data>> kvlist;
 
+		fprintf(stderr, "\t Before KV List: %d  intervals: %d\n", kvlist.size(), intervals.size());
+
 		for (int i=0; i<(int)intervals.size(); i++){
 			// Extract kv list
 			auto it = data.upper_bound(intervals[i].first);
 			if (it == data.end()) it = data.begin();
 			if (it != data.end()) {
-				for (auto jt=it->second. begin(); jt != it->second.end(); ) {
+				for (auto jt=it->second.begin(); jt != it->second.end(); ) {
+
+					fprintf(stderr, "\t Loop KV List: %d\n", kvlist.size());
 					if (node_table.find_virtual_node(jt->first) == intervals[i].second) {
 						kvlist.push_back(*jt);
 						jt = it->second.erase(jt);
+					} else {
+						jt ++;
 					}
 				}
 			}
@@ -498,10 +500,13 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 
 		
 		}	
+
+		fprintf(stderr, "\t Finish KV List: %d\n", kvlist.size());
+
 		// Send
 		m.type = MSG_DONATE_REQUEST;
 		m.set_kv_list(kvlist);
-		m.print("\t~~~~~~~~~~~~~~~ Donate  Data in interval  ~~~~~~~~~~~~~~\n");
+		fprintf(stderr, "\t~~~~~~~~~~~~~~~ node %d donates tokens to node %d  ~~~~~~~~~~~~~~\n", id, m.node_id);
 		m.send(bootfd, m.data);
 		// m.print("\t[[[  Donate  Data in interval  ]]] \n");
 		kvlist.clear();

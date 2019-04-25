@@ -61,6 +61,7 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 				it = prev(vnodes.end());
 			else it --;
 			if (snodes[it->second] == snodes[new_node->second] || it == new_node) 
+			//if (it == new_node)
 				break;			
 		}
 
@@ -72,9 +73,22 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			count[snodes[jt->second]] ++;
 		}
 		
-		fprintf(stderr, "\t\tset head and tail\n");
+		fprintf(stderr, "\t\tset head and tail: %d possible donators\n", count.size());
 
 		while (it != new_node) {
+
+			//
+			auto kt = it;
+			while (kt != jt) {
+				fprintf(stderr, "\t{%d,%d}", kt->second, snodes[kt->second]);
+				kt ++;
+				if (kt == vnodes.end()) kt = vnodes.begin();
+			}
+			fprintf(stderr, "\t{%d,%d}", kt->second, snodes[kt->second]);
+			fprintf(stderr, "\n");
+			
+
+			//
 			VirtualNodeID vid_start = it->second;
 
 			it++;
@@ -97,8 +111,12 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			}
 		}
 	}
+
+
+	fprintf(stderr, "\t\tfind %d donators\n", donate_info.size());
 	return donate_info;
 }
+
 int GTStoreManager::manage_node_request(Message &m, int fd){
 	// Manage entrance and exit status of nodes
 	int num_new_vnodes;
@@ -121,15 +139,18 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	for (auto& p : node_table.storage_nodes) {
 		m.length += 1+sprintf(m.data + m.length, "%d %d", p.first, p.second);
 	}
-	m.owner = __func__;
-	m.send(fd, m.data);
-	m.recv(fd);
 	
 	// TODO
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>> donate_info;
 	if (node_table.nodes.size() > CONFIG_N) {
 		donate_info = donate_information(vvid);
 	}
+
+	m.owner = __func__;
+	m.coordinator_id = donate_info.size();
+	m.send(fd, m.data);
+	m.recv(fd);
+
 	// broadcast to old nodes
 	fprintf(stderr, "\t%s: Broadcast to storage nodes\n", __func__);
 

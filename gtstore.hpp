@@ -22,8 +22,8 @@ using namespace std;
 
 typedef string val_t;
 
-#define CONFIG_V	1
-#define CONFIG_N	5
+#define CONFIG_V	3
+#define CONFIG_N	4
 #define CONFIG_R	3
 #define CONFIG_W	3
 
@@ -206,7 +206,7 @@ public:
 	// bool read_remote(string key, Data& data, StorageNodeID, VirtualNodeID);
 	// bool write_remote(string key, Data data, StorageNodeID, VirtualNodeID);
 
-	void collect_tokens();
+	void collect_tokens(int todo);
 	void exec();
 	void leave();
 	// Exclusive connection to client/manager
