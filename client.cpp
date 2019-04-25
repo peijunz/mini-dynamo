@@ -55,29 +55,14 @@ ssize_t rio_readn(int fd, char* buf, size_t n) {
 	return (ssize_t)(n - rem);
 }
 
-int read_line(int fd, char* buf, size_t n, int *loc) {
-	size_t rem = n;
-	ssize_t nread;
-	while(rem > 0) {
-		if((nread = read(fd, buf, rem)) < 0) {
-			if(errno == EINTR)
-				nread = 0;
-			else{
-				perror("read fail");
-				return -1;
+int read_line(int fd, char* buf, int n) {
+	for(int i = 0; i < n; i++) {
+			if(rio_readn(fd, buf + i, 1) <= 0) return -2;
+			if(buf[i] == '\n') {
+				return i + 1;
 			}
-		} else if(nread == 0)
-			break;
-		rem -= (size_t)nread;
-		buf += nread;
-		for (char *p=buf-nread; p < buf; p++){
-			if (*p=='\n'){
-				*loc = n-rem-(buf-p)+1;
-				return (ssize_t)(n - rem);
-			}
-		}
 	}
-	return (ssize_t)(n - rem);
+	return -1;
 }
 
 
@@ -115,7 +100,7 @@ int Message::set(int t, int cid, int nid, int l){
 int Message::send(int fd, const char *content){
 	char header[128];
 	print(owner + " Send");
-	printf("start to send header.....\n");
+	// printf("start to send header.....\n");
 
 	sprintf(header, "%d %d %d %d %d %ld\n", type, client_id, node_id, coordinator_id, vid, length);
 	if (rio_writen(fd, header, strlen(header)) == -1){
@@ -123,33 +108,30 @@ int Message::send(int fd, const char *content){
 		exit(-1);
 	}
 	assert((length>0) ^ (content==NULL));
-	fprintf(stderr, "start to send message.....\n");
+	// fprintf(stderr, "start to send message.....\n");
 	if (content){
 		if (rio_writen(fd, content, length) == -1){
 			printf("Write error\n");
 			exit(-1);
 		}
 	}
-	fprintf(stderr, "start to send message..... success\n");	
+	// fprintf(stderr, "start to send message..... success\n");	
 	return 0;
 }
 
 int Message::recv(int fd){
 	if (data!=NULL)
 		delete[] data;
-	int offset = 0;
 	char buf[256];
 	int n;
-	if ((n = read_line(fd, buf, sizeof(buf), &offset)) < 0){
+	if ((n = read_line(fd, buf, sizeof(buf))) < 0){
 		fprintf(stderr, "Failed in reading message\n");
 		exit(-1);
 	}
 	sscanf(buf, "%d %d %d %d %d %ld\n", &type, &client_id, &node_id, &coordinator_id, &vid, &length);
 	data = new char[length+1];
 	data[length] = 0;
-	memcpy(data, buf+offset, n-offset);
-	rio_readn(fd, data+n-offset, length-(n-offset));
-
+	rio_readn(fd, data, length);
 	print(owner + " Received");
 	return 0;
 }
@@ -162,7 +144,7 @@ Message::~Message(){
 
 void Message::print(string info){
 	// printf("aaaaa\n");
-	printf("\t%s: %d(%s) %d %d %ld\n", info.data(), type, typestr(type).data(), client_id, node_id, length);
+	printf("\t%s header: %d(%s) %d %d %ld\n", info.data(), type, typestr(type).data(), client_id, node_id, length);
 	if (length && data){
 		char*buf=new char[length+1];
 		buf[length] = 0;
@@ -170,7 +152,7 @@ void Message::print(string info){
 		for(char*p=buf; p<buf + length; p++){
 			if (*p==0) *p='\t';
 		}
-		printf("\tContent: %.*s\n\n", (int)length, buf);
+		printf("\t%s Content: %.*s\n\n", info.data(), (int)length, buf);
 		delete[] buf;
 	}
 	// printf("bbbbb\n");
@@ -295,6 +277,7 @@ void NodeTable::add_virtual_node(VirtualNodeID vid) {
 	size_t hash_key = consistent_hash("virtual_node_" + to_string(vid));
 	virtual_nodes.insert({hash_key, vid});
 	printf ("\tvid=%d", vid);
+	printf("\n");
 }
 
 void NodeTable::add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid) {
