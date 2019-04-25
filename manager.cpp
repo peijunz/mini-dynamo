@@ -141,6 +141,7 @@ int GTStoreManager::manage_node_request_leave(Message &m, int fd){
 		close(fd2);
 	}
 	fprintf(stderr, "<<< GTStoreManager: %s\n", __func__);
+	m.send(fd);
 	return 0;
 }
 
@@ -177,7 +178,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	m.recv(fd);
 
 	// broadcast to old nodes
-	fprintf(stderr, "\t%s: Broadcast to storage nodes\n", __func__);
+	fprintf(stderr, "\t%s: Broadcast new node %d to old storage nodes\n", __func__, sid);
 
 	for (auto& x: node_table.nodes) {
 		StorageNodeID nodeid = x.first;
@@ -207,7 +208,6 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	}
 
 	m.recv(fd);
-	close(fd);
 	fprintf(stderr, "<<< %s: Exiting\n", __func__);
 
 	return 0;

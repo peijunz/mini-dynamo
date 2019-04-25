@@ -58,7 +58,7 @@ int main() {
         create_storage_node(i);
     }
     sleep(1);
-    for (int i=0; i<1; i++){
+    for (int i=0; i<5; i++){
         if ((pid = Fork()) == 0) {
             printf("========================\n");
             printf("=== Running Client %d...\n", i);
@@ -74,6 +74,20 @@ int main() {
     }
 
     sleep(1);
+    printf("======================== DEBUG 1================\n");
+    for (int i=0; i<2*CONFIG_N; i++){
+        int debugfd = openfd(storage_node_addr(i).data());
+        if (debugfd < 0){
+            printf("ERROR: debug fail");
+            exit(-1);
+        }
+        Message m(DEBUG_MASK, -1, -1, 0);
+        m.send(debugfd);
+        close(debugfd);
+    }
+    printf("---------------------- DEBUG 1================\n");
+    
+    sleep(1);
     for (int i=0; i<2*CONFIG_N; i++) {
         int& pid = children[i+1];
         kill(pid, SIGTERM);
@@ -82,6 +96,18 @@ int main() {
         usleep(3e5);
     }
 
+    printf("======================== DEBUG 2================\n");
+    for (int i=0; i<2*CONFIG_N; i++){
+        int debugfd = openfd(storage_node_addr(i+2*CONFIG_N).data());
+        if (debugfd < 0){
+            printf("ERROR: debug fail");
+            exit(-1);
+        }
+        Message m(DEBUG_MASK, -1, -1, 0);
+        m.send(debugfd);
+        close(debugfd);
+    }
+    printf("---------------------- DEBUG 2================\n");
     if(SIG_ERR == signal(SIGINT, _sig_handler)) {
         fprintf(stderr, "Unable to catch SIGINT...exiting.\n");
         exit(1);

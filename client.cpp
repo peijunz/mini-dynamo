@@ -119,7 +119,7 @@ int Message::send(int fd, const char *content){
 			exit(-1);
 		}
 	}
-	fprintf(stderr, "Send message..... success\n");	
+	// fprintf(stderr, "Send message..... success\n");	
 	return 0;
 }
 
@@ -128,7 +128,7 @@ int Message::recv(int fd){
 		delete[] data;
 	char buf[256];
 	int n;
-	fprintf(stderr, "Receiving message.....\n");	
+	// fprintf(stderr, "Receiving message.....\n");	
 	if ((n = read_line(fd, buf, sizeof(buf))) < 0){
 		fprintf(stderr, "Failed in reading message\n");
 		exit(-1);
@@ -137,7 +137,7 @@ int Message::recv(int fd){
 	data = new char[length+1];
 	data[length] = 0;
 	rio_readn(fd, data, length);
-	print(owner + " Received");
+	// print(owner + " Received");
 	return 0;
 }
 
@@ -352,8 +352,12 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 	return pref_list;
 }
 
-
-
+void NodeTable::print_ring() {
+	for (auto& p : virtual_nodes) {
+		fprintf(stderr, "--%d(%d)--", storage_nodes[p.second], p.second);
+	}
+	fprintf(stderr, "\n");
+}
 
 
 

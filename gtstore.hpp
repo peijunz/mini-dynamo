@@ -53,6 +53,7 @@ public:
 #define DONATE_MASK 1<<6
 #define KV_MASK 1<<7
 #define LEAVE_MASK 1<<7
+#define DEBUG_MASK 1<<8
 #define ERROR_MASK 1<<9
 
 
@@ -145,6 +146,8 @@ public:
 	VirtualNodeID find_virtual_node(string key);
 	//VirtualNodeID find_neighbor_virtual_node(VirtualNodeID);
 
+	void print_ring();
+
 	vector<pair<VirtualNodeID, StorageNodeID>> get_preference_list(string key, int size=1);
 
 };
@@ -220,7 +223,8 @@ public:
 	bool process_manage_reply_leave(Message& msg, int fd);
 	//// TODO: leave
 
-
+	void print_ring();
+	void print_data();
 
 	// Communication between nodes
 	bool process_forward_request(Message& msg);

@@ -12,11 +12,18 @@ void GTStoreStorage::leave() {
 	/// Transfer data to others
 	unordered_map<StorageNodeID, vector<pair<string, Data>>> to_send;
 
-	// find new location for its data
 	if (node_table.nodes.size()>CONFIG_N){
+		fprintf(stderr, "I am node %d, I want to leave\n", id);
+		print_ring();
+		print_data();
+
+		// remove itself
+		node_table.remove_storage_node(id);
+
+		// find new location for its data
 		for (auto& x: data) {
 			for (auto& y: x.second) {
-				auto replica = node_table.get_preference_list(y.first, CONFIG_N + 1);
+				auto replica = node_table.get_preference_list(y.first, CONFIG_N);
 				auto& dest = to_send[replica.back().second];
 				dest.push_back(y);
 			}
@@ -24,25 +31,49 @@ void GTStoreStorage::leave() {
 		for (auto &x:to_send){
 			int sendfd = openfd(storage_node_addr(x.first).data());
 			if (sendfd < 0){
-				perror("ERROR: send tokens");
+				perror(("ERROR: Node " + to_string(id) + " sends tokens to " + to_string(x.first)).data());
 				exit(1);
 			}
 			m.set_kv_list(x.second);
 			m.type = MSG_DONATE_REQUEST;
+			m.client_id = id;
+			m.node_id = x.first;
 			m.send(sendfd, m.data);
 			fprintf(stderr, "~~~~~~~~~~~ Node %d donates to node %d before leaving\n", id, x.first);
 			close(sendfd);
 		}
 	}
+	else
+	{
+		// print out local data
+		print_ring();
+		print_data();
+	}
+	
 
 	/// Detach from manager
 	fprintf(stderr, "~~~~~~~~~~~ Node %d detached from manager\n", id);
 	m.type = FORWARD_MASK | LEAVE_MASK;
 	m.length = 0;
+	m.node_id = id;
     m.send(fd);
+	m.recv(fd);
 	close(fd);
 	return;
 }
+
+void GTStoreStorage::print_ring() {
+	node_table.print_ring();
+}
+
+void GTStoreStorage::print_data() {
+	for (auto& x: data) {
+		for (auto& y: x.second) {
+			fprintf(stderr, "\t<<<--- Node %d:    Key: %s    Version: %llu    Value: %s --->>>\n", id, y.first.data(), y.second.version, y.second.value.data());
+		}
+	}
+}
+
 
 void GTStoreStorage::init(int num_vnodes) {
 	// TODO: Contact Manager to get global data
@@ -232,7 +263,13 @@ void GTStoreStorage::exec() {
 		Message m;
 		m.owner = string("storage_") + to_string(id) + "_" + + __func__;
 		m.recv(connfd);
-		if (m.type & CLIENT_MASK) {
+		if (m.type & DEBUG_MASK) {
+			// Because client does not listen, we do not
+			// close client until we got a reply at process_forward_reply
+			// print_ring();
+			print_data();
+		}
+		else if (m.type & CLIENT_MASK) {
 			// Because client does not listen, we do not
 			// close client until we got a reply at process_forward_reply
 			process_client_request(m, connfd);
@@ -456,13 +493,19 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 }
 
 bool GTStoreStorage::process_donate_request(Message& m) {
-	printf("Process donate req\n");
+	printf("Process donate req from %d\n", m.node_id);
+	print_ring();
+	print_data();
 	vector<pair<string, Data>> kvlist = m.get_kv_list();
 	for (auto& kv : kvlist) {
 		//VirtualNodeID vid = find_global_virtual_node(kv.first);
 		VirtualNodeID vid = find_local_virtual_node(kv.first);
+		//assert (this->data[vid].count(kv.first)==0);
 		this->data[vid].insert(kv);
 	}
+	fprintf(stderr, "After accept donation from %d:", m.client_id);
+	print_ring();
+	print_data();
 	return false;
 }
 
@@ -534,9 +577,14 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 
 		fprintf(stderr, "\t Finish KV List: %ld\n", kvlist.size());
 
+	print_ring();
+	print_data();
+
 		// Send
 		m.type = MSG_DONATE_REQUEST;
 		m.set_kv_list(kvlist);
+		m.client_id = id;
+		// m.node_id = m.node_id;
 		fprintf(stderr, "\t~~~~~~~~~~~~~~~ node %d donates tokens to node %d  ~~~~~~~~~~~~~~\n", id, m.node_id);
 		m.send(bootfd, m.data);
 		// m.print("\t[[[  Donate  Data in interval  ]]] \n");
