@@ -23,7 +23,7 @@ using namespace std;
 typedef string val_t;
 
 #define CONFIG_V	3
-#define CONFIG_N	4
+#define CONFIG_N	5
 #define CONFIG_R	3
 #define CONFIG_W	3
 

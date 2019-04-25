@@ -11,15 +11,7 @@ void GTStoreStorage::leave() {
 	m.owner = "GTStoreStorage::leave";
 	/// Transfer data to others
 	unordered_map<StorageNodeID, vector<pair<string, Data>>> to_send;
-/*
-	for(auto&x: data){
-		auto replica = node_table.get_preference_list(virtual_node_addr(x.first), CONFIG_N);
-		auto& dest = to_send[replica[replica.size()-1].second];
-		for (auto &y: x.second){
-			dest.push_back({y.first, y.second});
-		}
-	}
-	*/
+
 	// find new location for its data
 	if (node_table.nodes.size()>CONFIG_N){
 		for (auto& x: data) {
@@ -32,19 +24,19 @@ void GTStoreStorage::leave() {
 		for (auto &x:to_send){
 			int sendfd = openfd(storage_node_addr(x.first).data());
 			if (sendfd < 0){
-				perror("send tokens");
+				perror("ERROR: send tokens");
 				exit(1);
 			}
 			m.set_kv_list(x.second);
 			m.type = MSG_DONATE_REQUEST;
 			m.send(sendfd, m.data);
-			fprintf(stderr, "~~~~~~~~~~~ node %d donates to node %d before leaving\n", id, x.first);
+			fprintf(stderr, "~~~~~~~~~~~ Node %d donates to node %d before leaving\n", id, x.first);
 			close(sendfd);
 		}
 	}
 
 	/// Detach from manager
-	fprintf(stderr, "~~~~~~~~~~~~ Node %d detached from manager\n", id);
+	fprintf(stderr, "~~~~~~~~~~~ Node %d detached from manager\n", id);
 	m.type = FORWARD_MASK | LEAVE_MASK;
 	m.length = 0;
     m.send(fd);
@@ -60,7 +52,7 @@ void GTStoreStorage::init(int num_vnodes) {
 
     int fd = openfd(manager_addr);
     if (fd < 0){
-        printf("error in nodefd\n");
+        printf("ERROR: error in nodefd\n");
         exit(-1);
     }
     Message m(MSG_FORWARD_REQUEST, -1, -1, 0);
@@ -285,6 +277,7 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	StorageNodeID sid = find_coordinator(m.data);
 	forward_tasks[m.client_id] = fd;
 
+	m.node_id = id;
 	if (sid == id){
 		// Do not forward, reply and then close
 		// printf("\tContact is coordinatior\n");
@@ -295,7 +288,8 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 		m.type = MSG_FORWARD_REQUEST | (m.type & WRITE_MASK);
 		int fwdfd = openfd(storage_node_addr(sid).data());
 		if (fwdfd < 0){
-			perror("forward fd");
+			perror("ERROR: forward fd");
+			exit(1);
 		}
 		m.owner = __func__;
 		m.send(fwdfd, m.data);
@@ -337,7 +331,7 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 		string coordinator_addr = node_addr + "_" + to_string(pref.second);
 		int nodefd = openfd(coordinator_addr.data());
 		if (nodefd < 0){
-			printf("nodefd");
+			printf("ERROR: nodefd");
 			exit(1);
 		}
 		m.owner = __func__;
@@ -377,7 +371,7 @@ bool GTStoreStorage::process_coordinate_request(Message& m) {
 	m.get_key_data(key, data);
 	int node_fd = openfd(storage_node_addr(m.coordinator_id).data());
 	if (node_fd < 0){
-		perror("node fd");
+		perror("ERROR: node fd");
 		exit(1);
 	}
 	if (m.type & WRITE_MASK) {
@@ -414,9 +408,10 @@ bool GTStoreStorage::finish_coordination(Message &m, string &key){
 		m.type = MSG_FORWARD_REPLY | (m.type & WRITE_MASK);
 		m.set_key_data(key, working_tasks[m.client_id].second);
 		string transferrer_addr = node_addr + "_" + to_string(m.node_id);
+		printf("send back to transferrer: %s\n", transferrer_addr.c_str());
 		int nodefd = openfd(transferrer_addr.data());
 		if (nodefd < 0){
-			printf("error in nodefd\n");
+			printf("ERROR: in nodefd\n");
 			exit(-1);
 		}
 		m.owner = __func__;

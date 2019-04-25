@@ -27,7 +27,7 @@ int GTStoreManager::manage_client_request(Message &m, int fd){
 	printf(">>> %s: Entering\n", __func__);
 	if (!node_table.nodes.size()){
 		m.type |= ERROR_MASK;
-		m.node_id = 0;
+		m.node_id = -1;
 	}
 	else{
 		auto it = node_table.nodes.upper_bound(cur_contact);
@@ -133,7 +133,8 @@ int GTStoreManager::manage_node_request_leave(Message &m, int fd){
 		assert (nodeid != sid);
 		int fd2 = openfd(storage_node_addr(nodeid).data());
 		if (fd2<0){
-			perror("wrong fd\n");
+			perror("ERROR: wrong fd in manage node req leave\n");
+			exit(1);
 		}
 		m.send(fd2);
 		m.print("Manager send leaving message:---------------\n");
@@ -192,7 +193,8 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 		if (nodeid == sid) continue;
 		int fd2 = openfd(storage_node_addr(nodeid).data());
 		if (fd2<0){
-			perror("wrong fd\n");
+			perror("ERROR: wrong fd\n");
+			exit(1);
 		}
 		if (donate_info.count(nodeid))
 			m.type |= DONATE_MASK;
@@ -219,6 +221,7 @@ void GTStoreManager::exec(){
         	perror("Accept fail");
 		}
 		Message m;
+		m.owner = ">>> Manager:Exec <<<";
 		m.recv(connfd);
 		if (m.type & CLIENT_MASK) {
 			manage_client_request(m, connfd);

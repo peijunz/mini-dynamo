@@ -2,16 +2,16 @@
 #include "gtstore.hpp"
 
 vector<int> children;
+char *args[] = { 0 }; /* each element represents a command line argument */
+char *env[] = { 0 }; /* leave the environment list null */
 
 static void _sig_handler(int signo) {
     if(signo == SIGINT || signo == SIGTERM) {
         for(int i=1; i<children.size(); i++){
             int pid = children[i];
             kill(pid, SIGTERM);
-            //fprintf(stderr, ">->->->->->->->->->->->->->->->->->->->->   Wait ending\n");
             waitpid(pid, NULL, NULL);
             //sleep(1);
-            //fprintf(stderr, "<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<   Wait ending complete\n");
         }
         kill(children[0], SIGTERM);
     	exit(1);
@@ -27,10 +27,23 @@ int Fork(){
     return pid;
 }
 
+int create_storage_node(int i) {
+    int pid;
+    if ((pid = Fork()) == 0) {
+        printf("========================\n");
+        printf("=== Starting Storage Node %d...\n", i);
+        execve("./storage", args, env);
+        return 0;
+    }
+    // usleep(300000);
+    printf("========================\n");
+    children.push_back(pid);
+    return pid;
+}
+
+
 int main() {
     int manager_id, pid;
-    char *args[] = { 0 }; /* each element represents a command line argument */
-    char *env[] = { 0 }; /* leave the environment list null */
     if ((manager_id = Fork()) == 0) {
         unlink(manager_addr);
         printf("========================\n");
@@ -41,58 +54,32 @@ int main() {
     }
     children.push_back(manager_id);
     sleep(1);
-    for (int i=0; i<8; i++){
-        if ((pid = Fork()) == 0) {
-            printf("========================\n");
-            printf("=== Starting Storage Node %d...\n", i);
-            execve("./storage", args, env);
-            return 0;
-        }
-        // usleep(300000);
-        printf("========================\n");
-        children.push_back(pid);
+    for (int i=0; i<2*CONFIG_N; i++){
+        create_storage_node(i);
     }
     sleep(1);
-    for (int i=0; i<4; i++){
-        if (0) {
-
-            if ((pid = Fork()) == 0) {
-                printf("========================\n");
-                printf("=== Starting Storage Node %d...\n", i);
-                execve("./storage", args, env);
-                return 0;
-            }
-            usleep(300000);
+    for (int i=0; i<1; i++){
+        if ((pid = Fork()) == 0) {
             printf("========================\n");
-            children.push_back(pid);
-        } else {
-            //continue;
-            
-            if ((pid = Fork()) == 0) {
-                printf("========================\n");
-                printf("=== Running Client %d...\n", i);
-                GTStoreClient client;
-                client.init(i);
-                client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
-                client.get("test_key_"+to_string(i));
-                return 0;
-            }
-            children.push_back(pid);
-            
-                        /*
-            if ((pid = Fork()) == 0) {
-                printf("========================\n");
-                printf("=== Starting Storage Node %d...\n", i);
-                char *args_leave[] = {""};
-                execve("./storage", args_leave, env);
-                return 0;
-            }
-            usleep(300000);
-            printf("========================\n");
-            children.push_back(pid);
-            */
+            printf("=== Running Client %d...\n", i);
+            GTStoreClient client;
+            client.init(i);
+            client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
+            client.get("test_key_"+to_string(i));
+            sleep(5);
+            client.get("test_key_"+to_string(i));
+            return 0;
         }
-        sleep(1);
+        children.push_back(pid);
+    }
+
+    sleep(1);
+    for (int i=0; i<2*CONFIG_N; i++) {
+        int& pid = children[i+1];
+        kill(pid, SIGTERM);
+        waitpid(pid, NULL, NULL);
+        pid = create_storage_node(i+2*CONFIG_N);
+        usleep(3e5);
     }
 
     if(SIG_ERR == signal(SIGINT, _sig_handler)) {
@@ -104,7 +91,7 @@ int main() {
         fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
         exit(1);
     }
-    sleep(2);
+    sleep(10);
     _sig_handler(SIGINT);
     return 0;
 }

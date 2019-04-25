@@ -6,7 +6,7 @@ int openfd(const char *addr){
 	int fd;
 	struct sockaddr_un sun;
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
-		perror ("Create socket error");
+		perror("ERROR: Create socket");
 		return -1;
 	}
 	memset(&sun, 0, sizeof(sun));
@@ -14,7 +14,7 @@ int openfd(const char *addr){
 	strcpy(sun.sun_path, addr);
 	int len = offsetof(struct sockaddr_un, sun_path) + strlen(addr);
 	if (connect(fd, (struct sockaddr *)&sun, len) < 0) {
-		perror ("Socket connect error");
+		perror ("ERROR: Socket connect");
 		return -1;
 	}
 	return fd;
@@ -119,7 +119,7 @@ int Message::send(int fd, const char *content){
 			exit(-1);
 		}
 	}
-	// fprintf(stderr, "start to send message..... success\n");	
+	fprintf(stderr, "Send message..... success\n");	
 	return 0;
 }
 
@@ -128,6 +128,7 @@ int Message::recv(int fd){
 		delete[] data;
 	char buf[256];
 	int n;
+	fprintf(stderr, "Receiving message.....\n");	
 	if ((n = read_line(fd, buf, sizeof(buf))) < 0){
 		fprintf(stderr, "Failed in reading message\n");
 		exit(-1);
@@ -369,7 +370,7 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 int GTStoreClient::get_contact_node(int id) {
     int fd = openfd(manager_addr);
     if (fd < 0){
-        printf("error in clientfd\n");
+        printf("ERROR: in clientfd get contact\n");
         exit(-1);
     }
     Message m(MSG_CLIENT_REQUEST, id, -1, 0);
@@ -391,7 +392,7 @@ int GTStoreClient::connect_contact_node(){
 		if (fd > 0) return fd;
 		node_id = get_contact_node(client_id);
 	}
-	printf("error in clientfd\n");
+	printf("ERROR: in clientfd\n");
 	exit(-1);
 }
 
