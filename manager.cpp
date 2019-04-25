@@ -120,10 +120,14 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 int GTStoreManager::manage_node_request_leave(Message &m, int fd){
 	fprintf(stderr, ">>> GTStoreManager: %s\n", __func__);
 	int sid = m.node_id;
+	printf("#nodes= %d\n", node_table.nodes.size());
 	node_table.remove_storage_node(sid);
+	printf("#nodes= %d\n", node_table.nodes.size());
+	m.owner = __func__;
 	m.type = MANAGE_MASK|LEAVE_MASK;
 
 	for (auto& x: node_table.nodes) {
+		printf("Sending close to %d\n", x.first);
 		StorageNodeID nodeid = x.first;
 
 		assert (nodeid != sid);

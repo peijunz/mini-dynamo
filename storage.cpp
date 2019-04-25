@@ -20,9 +20,8 @@ void GTStoreStorage::leave() {
 		}
 	}
 	*/
-
-	if (node_table.nodes.size() > CONFIG_N) {
-		// find new location for its data
+	// find new location for its data
+	if (node_table.nodes.size()>CONFIG_N){
 		for (auto& x: data) {
 			for (auto& y: x.second) {
 				auto replica = node_table.get_preference_list(y.first, CONFIG_N + 1);
@@ -30,7 +29,6 @@ void GTStoreStorage::leave() {
 				dest.push_back(y);
 			}
 		}
-		fprintf(stderr, "~~~~~~~ Before leaving, send to %d other nodes\n", to_send.size());
 		for (auto &x:to_send){
 			int sendfd = openfd(storage_node_addr(x.first).data());
 			if (sendfd < 0){
@@ -40,7 +38,7 @@ void GTStoreStorage::leave() {
 			m.set_kv_list(x.second);
 			m.type = MSG_DONATE_REQUEST;
 			m.send(sendfd, m.data);
-			fprintf(stderr, "~~~~~~~~~~~ sent to node %d\n", x.first);
+			fprintf(stderr, "~~~~~~~~~~~ node %d donates to node %d before leaving\n", id, x.first);
 			close(sendfd);
 		}
 	}
@@ -48,6 +46,7 @@ void GTStoreStorage::leave() {
 	/// Detach from manager
 	fprintf(stderr, "~~~~~~~~~~~~ Node %d detached from manager\n", id);
 	m.type = FORWARD_MASK | LEAVE_MASK;
+	m.length = 0;
     m.send(fd);
 	close(fd);
 	return;
@@ -462,6 +461,7 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 }
 
 bool GTStoreStorage::process_donate_request(Message& m) {
+	printf("Process donate req\n");
 	vector<pair<string, Data>> kvlist = m.get_kv_list();
 	for (auto& kv : kvlist) {
 		//VirtualNodeID vid = find_global_virtual_node(kv.first);

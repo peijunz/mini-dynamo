@@ -5,14 +5,16 @@ vector<int> children;
 
 static void _sig_handler(int signo) {
     if(signo == SIGINT || signo == SIGTERM) {
-        for(auto it=children.rbegin(); it!=children.rend(); it++){
-            int pid = *it;
+        for(int i=1; i<children.size(); i++){
+            int pid = children[i];
             kill(pid, SIGTERM);
             //fprintf(stderr, ">->->->->->->->->->->->->->->->->->->->->   Wait ending\n");
             waitpid(pid, NULL, NULL);
-            sleep(1);
+            //sleep(1);
             //fprintf(stderr, "<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<   Wait ending complete\n");
         }
+        kill(children[0], SIGTERM);
+    	exit(1);
     }
 }
 
@@ -102,7 +104,7 @@ int main() {
         fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
         exit(1);
     }
-    sleep(3);
+    sleep(2);
     _sig_handler(SIGINT);
     return 0;
 }

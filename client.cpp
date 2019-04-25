@@ -111,7 +111,7 @@ int Message::send(int fd, const char *content){
 		perror("Write error\n");
 		exit(-1);
 	}
-	assert((length==0) || (content));
+	assert((length==0) || content);
 	// fprintf(stderr, "start to send message.....\n");
 	if (content){
 		if (rio_writen(fd, content, length) == -1){
