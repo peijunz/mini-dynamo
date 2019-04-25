@@ -323,21 +323,7 @@ VirtualNodeID NodeTable::find_virtual_node(string key) {
 		it = virtual_nodes.begin();
 	return it->second;
 }
-/*
-VirtualNodeID NodeTable::find_neighbor_virtual_node(VirtualNodeID vid) {
 
-	size_t hash_key = consistent_hash("virtual_node_" + to_string(vid));
-	StorageNodeID sid = storage_nodes[vid];
-	auto it0 = virtual_nodes.find(hash_key);
-	auto it = it0;
-	do {
-		if (storage_nodes[it->second] != sid)
-			return it->second;
-	} while (++it != it0);
-
-	return -1;	
-}
-*/
 vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
 	size_t hash_key = consistent_hash(key);
 	auto it = virtual_nodes.upper_bound(hash_key);
@@ -400,11 +386,11 @@ int GTStoreClient::get_contact_node(int id) {
 
 int GTStoreClient::connect_contact_node(){
 	int fd = -1;
-	// for (int i=0; i<4; i++){
+	for (int i=0; i<4; i++){
 		fd = openfd(storage_node_addr(node_id).c_str());
 		if (fd > 0) return fd;
-		// node_id = get_contact_node(client_id);
-	// }
+		node_id = get_contact_node(client_id);
+	}
 	printf("error in clientfd\n");
 	exit(-1);
 }
@@ -472,6 +458,7 @@ bool GTStoreClient::put(string key, val_t value) {
 }
 
 void GTStoreClient::finalize() {
-	
-	cout << ">>> Inside GTStoreClient::finalize() for client " << client_id << "\n";
+	// Nothing to do
+	return;
+	// cout << ">>> Inside GTStoreClient::finalize() for client " << client_id << "\n";
 }
