@@ -103,10 +103,11 @@ void GTStoreStorage::collect_tokens(){
     	if (connfd == -1) {
         	perror("Accept fail");
 		}
-		printf("\tGot token, todo=%d\n", todo);
 		Message m;
 		m.owner = __func__;
 		m.recv(connfd);
+		printf("\t~~~~~~~~~~~~~~~~~~~~~~~~~~~  Got token, todo=%d\n", todo);
+		/*
 		assert(m.type == MSG_DONATE_REQUEST);
 		intervals = m.get_intervals();
 		for (int i=0; i<(int)intervals.size(); i++){
@@ -119,7 +120,14 @@ void GTStoreStorage::collect_tokens(){
 				it->second.insert(x);
 			}
 		}
+		*/
+		kvlist = m.get_kv_list();
+		for (auto& kv : kvlist) {
+			VirtualNodeID vid = node_table.find_virtual_node(kv.first);
+			this->data[vid].insert(kv);
+		}
 		todo--;
+		close(connfd);
 	}
 	printf("<<< Done Collecting tokens...\n");
 
@@ -420,14 +428,17 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
 		fprintf(stderr, "\t\t%ld\n", intervals.size());
 
+		if (intervals.size() == 0) {
+			return false;
+		}
+
 		int bootfd = openfd(storage_node_addr(m.node_id).data());
 		if (bootfd < 0){
 			perror("ERROR: connect boot fail");
 			exit(1);
 		}
 		m.type = MSG_DONATE_REQUEST;
-		m.send(bootfd, m.data);
-		m.print("\t[[[  Donate  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
+		//m.send(bootfd, m.data);
 		vector<pair<string, Data>> kvlist;
 
 		for (int i=0; i<(int)intervals.size(); i++){
@@ -444,19 +455,20 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 			}
 			fprintf(stderr, "00000000000000000000  Get kv list: size=%ld\n", kvlist.size());
 
-			// Send
-			m.type = MSG_DONATE_REQUEST;
-			m.set_kv_list(kvlist);
-			// m.print("\t[[[  Donate  Data in interval  ]]] \n");
-			m.send(bootfd, m.data);
-			// m.print("\t[[[  Donate  Data in interval  ]]] \n");
-			kvlist.clear();
-		}
+		
+		}	
+		// Send
+		m.type = MSG_DONATE_REQUEST;
+		m.set_kv_list(kvlist);
+		m.print("\t~~~~~~~~~~~~~~~ Donate  Data in interval  ~~~~~~~~~~~~~~\n");
+		m.send(bootfd, m.data);
+		// m.print("\t[[[  Donate  Data in interval  ]]] \n");
+		kvlist.clear();
 		close(bootfd);
 		m.print("\t[[[  Donated  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 	}
 	
-	close(fd);
+	//close(fd);
 
 	// no enough nodes
 	// if (node_table.nodes.size() <= CONFIG_N) {
