@@ -320,7 +320,7 @@ VirtualNodeID NodeTable::find_virtual_node(string key) {
 		it = virtual_nodes.begin();
 	return it->second;
 }
-
+/*
 VirtualNodeID NodeTable::find_neighbor_virtual_node(VirtualNodeID vid) {
 
 	size_t hash_key = consistent_hash("virtual_node_" + to_string(vid));
@@ -334,6 +334,7 @@ VirtualNodeID NodeTable::find_neighbor_virtual_node(VirtualNodeID vid) {
 
 	return -1;	
 }
+*/
 vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string key, int size) {
 	size_t hash_key = consistent_hash(key);
 	auto it = virtual_nodes.upper_bound(hash_key);

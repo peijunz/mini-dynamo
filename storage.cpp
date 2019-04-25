@@ -11,6 +11,7 @@ void GTStoreStorage::leave() {
 	m.owner = "GTStoreStorage::leave";
 	/// Transfer data to others
 	unordered_map<StorageNodeID, vector<pair<string, Data>>> to_send;
+/*
 	for(auto&x: data){
 		auto replica = node_table.get_preference_list(virtual_node_addr(x.first), CONFIG_N);
 		auto& dest = to_send[replica[replica.size()-1].second];
@@ -18,6 +19,17 @@ void GTStoreStorage::leave() {
 			dest.push_back({y.first, y.second});
 		}
 	}
+	*/
+	// find new location for its data
+	for (auto& x: data) {
+		for (auto& y: x.second) {
+			auto replica = node_table.get_preference_list(y.first, CONFIG_N + 1);
+			auto& dest = to_send[replica.back().second];
+			dest.push_back(y);
+		}
+	}
+
+
 	for (auto &x:to_send){
 	    int sendfd = openfd(storage_node_addr(x.first).data());
 		if (sendfd < 0){
@@ -157,7 +169,8 @@ void GTStoreStorage::collect_tokens(int todo){
 		*/
 		kvlist = m.get_kv_list();
 		for (auto& kv : kvlist) {
-			VirtualNodeID vid = node_table.find_virtual_node(kv.first);
+			//VirtualNodeID vid = find_global_virtual_node(kv.first);
+			VirtualNodeID vid = find_local_virtual_node(kv.first);
 			this->data[vid].insert(kv);
 		}
 		todo--;
@@ -195,7 +208,15 @@ bool GTStoreStorage::write_local(VirtualNodeID v_id, string key, Data data) {
 StorageNodeID GTStoreStorage::find_coordinator(string key) {
 	return node_table.get_preference_list(key, 1)[0].second;
 }
-
+VirtualNodeID GTStoreStorage::find_global_virtual_node(string key) {
+	return node_table.find_virtual_node(key);
+}
+VirtualNodeID GTStoreStorage::find_local_virtual_node(string key) {
+	VirtualNodeID global_vid = find_global_virtual_node(key);
+	auto it = data.upper_bound(global_vid);
+	if (it == data.end()) it = data.begin();
+	return it->first;
+}
 
 
 // bool GTStoreStorage::read_remote(string key, Data& data, StorageNodeID, VirtualNodeID) {
@@ -433,53 +454,14 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 }
 
 bool GTStoreStorage::process_donate_request(Message& m) {
-	/////// TODO:
 	vector<pair<string, Data>> kvlist = m.get_kv_list();
 	for (auto& kv : kvlist) {
-		VirtualNodeID vid = node_table.find_virtual_node(kv.first);
+		//VirtualNodeID vid = find_global_virtual_node(kv.first);
+		VirtualNodeID vid = find_local_virtual_node(kv.first);
 		this->data[vid].insert(kv);
 	}
 	return false;
 }
-
-
-
-/*
-void GTStoreStorage::collect_tokens(){
-	printf(">>> Collecting tokens...\n");
-	int todo = CONFIG_N;
-	int connfd;
-	vector<pair<int, int>> intervals;
-	vector<pair<string, Data>> kvlist;
-	while (todo){
-		connfd = accept(nodefd, NULL, NULL);
-    	if (connfd == -1) {
-        	perror("Accept fail");
-		}
-		Message m;
-		m.owner = __func__;
-		m.recv(connfd);
-		printf("\tGot token, todo=%d\n", todo);
-		assert(m.type == MSG_DONATE_REQUEST);
-		intervals = m.get_intervals();
-		printf("\tGet Donation size=%ld\n", intervals.size());
-		for (int i=0; i<(int)intervals.size(); i++){
-			m.recv(connfd);
-			kvlist = m.get_kv_list();
-			// TODO: Update kvlist to own storage
-			auto it = data.upper_bound(intervals[i].first);
-			if (it == data.end()) it = data.begin();
-			for (auto &x: kvlist){
-				it->second.insert(x);
-			}
-		}
-		todo--;
-		close(connfd);
-		sleep(1);
-	}
-	printf("<<< Done Collecting tokens...\n");
-
-}*/
 
 bool GTStoreStorage::process_manage_reply_leave(Message& m, int fd) {
 	node_table.remove_storage_node(m.node_id);
@@ -534,7 +516,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 				for (auto jt=it->second.begin(); jt != it->second.end(); ) {
 
 					fprintf(stderr, "\t Loop KV List: %ld\n", kvlist.size());
-					if (node_table.find_virtual_node(jt->first) == intervals[i].second) {
+					if (find_global_virtual_node(jt->first) == intervals[i].second) {
 						kvlist.push_back(*jt);
 						jt = it->second.erase(jt);
 					} else {
