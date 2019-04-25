@@ -118,6 +118,7 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 }
 
 int GTStoreManager::manage_node_request_leave(Message &m, int fd){
+	fprintf(stderr, ">>> GTStoreManager: %s\n", __func__);
 	int sid = m.node_id;
 	node_table.remove_storage_node(sid);
 	m.type = MANAGE_MASK|LEAVE_MASK;
@@ -131,8 +132,10 @@ int GTStoreManager::manage_node_request_leave(Message &m, int fd){
 			perror("wrong fd\n");
 		}
 		m.send(fd2);
+		m.print("Manager send leaving message:---------------\n");
 		close(fd2);
 	}
+	fprintf(stderr, "<<< GTStoreManager: %s\n", __func__);
 	return 0;
 }
 

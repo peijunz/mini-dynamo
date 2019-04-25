@@ -84,6 +84,8 @@ string typestr(int type){
 		s += "_REP";
 	if (type & DONATE_MASK)
 		s += "_DNT";
+	if (type & LEAVE_MASK)
+		s += "_LEA";
 	if (type & ERROR_MASK)
 		s += "_ERR";
 	return s;
@@ -109,7 +111,7 @@ int Message::send(int fd, const char *content){
 		perror("Write error\n");
 		exit(-1);
 	}
-	assert((length>0) ^ (content==NULL));
+	assert((length==0) || (content));
 	// fprintf(stderr, "start to send message.....\n");
 	if (content){
 		if (rio_writen(fd, content, length) == -1){
@@ -303,13 +305,14 @@ void NodeTable::add_storage_node(int num_vnodes, StorageNodeID& sid, vector<Virt
 }
 
 void NodeTable::remove_storage_node(StorageNodeID sid) {
-	printf(">>> %s\n", __func__);
+	printf(">>> %s", __func__);
 	printf ("\tsid=%d\n", sid);
 	for (VirtualNodeID vid : nodes[sid]) {
 		remove_virtual_node(vid);
 		storage_nodes.erase(vid);
 	}
 	nodes.erase(sid);
+	printf("<<< storage node %d removed\n", sid);
 }
 
 
