@@ -1,5 +1,39 @@
 #include "gtstore.hpp"
 
+
+void GTStoreStorage::leave() {
+    int fd = openfd(manager_addr);
+    if (fd < 0){
+        printf("error in nodefd\n");
+        exit(-1);
+    }
+    Message m(FORWARD_MASK|LEAVE_MASK, -1, id, 0);
+	m.owner = "GTStoreStorage::leave";
+	/// Transfer data to others
+	unordered_map<StorageNodeID, vector<pair<string, Data>>> to_send;
+	for(auto&x: data){
+		auto replica = node_table.get_preference_list(virtual_node_addr(x.first), CONFIG_N);
+		auto& dest = to_send[replica[replica.size()-1].second];
+		for (auto &y: x.second){
+			dest.push_back({y.first, y.second});
+		}
+	}
+	for (auto &x:to_send){
+	    int sendfd = openfd(storage_node_addr(x.first).data());
+		if (sendfd < 0){
+			perror("send tokens");
+			exit(1);
+		}
+		m.set_kv_list(x.second);
+		m.send(sendfd, m.data);
+		close(sendfd);
+	}
+	/// Detach from manager
+    m.send(fd);
+	close(fd);
+	return;
+}
+
 void GTStoreStorage::init(int num_vnodes) {
 	// TODO: Contact Manager to get global data
 
@@ -29,7 +63,9 @@ void GTStoreStorage::init(int num_vnodes) {
 		exit(-1);
 	}
 	id = m.node_id;
-	node_table.nodes.insert(id);
+	// node_table.nodes.insert(id);
+	node_table.nodes[id] = vector<VirtualNodeID>();
+
 	char *cur = m.data;
 	sscanf(cur, "%d", &num_vnodes);
 	cur += strnlen(cur, 24)+1;
@@ -46,8 +82,7 @@ void GTStoreStorage::init(int num_vnodes) {
 			//size_t hash_key = node_table.consistent_hash(vid);
 			data.insert({vid, {}});
 		}
-		else
-			node_table.nodes.insert(sid);
+		node_table.nodes[sid].push_back(vid);
 	}
 	printf("\n");
 
@@ -167,10 +202,6 @@ StorageNodeID GTStoreStorage::find_coordinator(string key) {
 // 	return false;
 // }
 
-void GTStoreStorage::leave() {
-	return;
-}
-
 void GTStoreStorage::exec() {
 
 	int connfd;
@@ -188,13 +219,19 @@ void GTStoreStorage::exec() {
 			process_client_request(m, connfd);
 		}
 		else if (m.type & MANAGE_MASK){
-			process_manage_reply(m, connfd);
+			if (m.type & LEAVE_MASK)
+				process_manage_reply_leave(m, connfd);
+			else
+				process_manage_reply(m, connfd);
+			close(connfd);
 		}
 		else{
 			// Communication between storage nodes, sockets are disposable
 			close(connfd);
-			switch (m.type & (FORWARD_MASK|COOR_MASK|REPLY_MASK))
+			switch (m.type & (FORWARD_MASK|COOR_MASK|REPLY_MASK|MSG_DONATE_REQUEST))
 			{
+				case MSG_DONATE_REQUEST:
+					process_donate_request(m);
 				case MSG_FORWARD_REPLY:
 					process_forward_reply(m);
 					break;
@@ -397,6 +434,11 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 
 bool GTStoreStorage::process_donate_request(Message& m) {
 	/////// TODO:
+	vector<pair<string, Data>> kvlist = m.get_kv_list();
+	for (auto& kv : kvlist) {
+		VirtualNodeID vid = node_table.find_virtual_node(kv.first);
+		this->data[vid].insert(kv);
+	}
 	return false;
 }
 
@@ -439,13 +481,18 @@ void GTStoreStorage::collect_tokens(){
 
 }*/
 
+bool GTStoreStorage::process_manage_reply_leave(Message& m, int fd) {
+	node_table.remove_storage_node(m.node_id);
+	return true;
+}
+
 bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
 	m.owner = __func__;
 	// a new node with id==m.node_id joins
 	printf(">>> GTStoreStorage::process_manage_reply: Entering");
 	m.owner = to_string(id) + "_" + __func__;
-	node_table.nodes.insert(m.node_id);
+	node_table.nodes[m.node_id] = vector<VirtualNodeID>();
 	int num_vnodes;
 	char*cur=m.data;
 	sscanf(cur, "%d", &num_vnodes);
@@ -463,7 +510,6 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 
 	if (node_table.nodes.size() > CONFIG_N && (m.type & DONATE_MASK)){
 		m.recv(fd);
-		close(fd);
 		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
 
 		// assert (intervals.size()!=0);
@@ -478,7 +524,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		//m.send(bootfd, m.data);
 		vector<pair<string, Data>> kvlist;
 
-		fprintf(stderr, "\t Before KV List: %d  intervals: %d\n", kvlist.size(), intervals.size());
+		fprintf(stderr, "\t Before KV List: %ld  intervals: %ld\n", kvlist.size(), intervals.size());
 
 		for (int i=0; i<(int)intervals.size(); i++){
 			// Extract kv list
@@ -487,7 +533,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 			if (it != data.end()) {
 				for (auto jt=it->second.begin(); jt != it->second.end(); ) {
 
-					fprintf(stderr, "\t Loop KV List: %d\n", kvlist.size());
+					fprintf(stderr, "\t Loop KV List: %ld\n", kvlist.size());
 					if (node_table.find_virtual_node(jt->first) == intervals[i].second) {
 						kvlist.push_back(*jt);
 						jt = it->second.erase(jt);
@@ -501,7 +547,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		
 		}	
 
-		fprintf(stderr, "\t Finish KV List: %d\n", kvlist.size());
+		fprintf(stderr, "\t Finish KV List: %ld\n", kvlist.size());
 
 		// Send
 		m.type = MSG_DONATE_REQUEST;

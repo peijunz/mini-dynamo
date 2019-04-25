@@ -25,15 +25,15 @@ void GTStoreManager::init() {
 
 int GTStoreManager::manage_client_request(Message &m, int fd){
 	printf(">>> %s: Entering\n", __func__);
-	if (!storage_nodes.size()){
+	if (!node_table.nodes.size()){
 		m.type |= ERROR_MASK;
 		m.node_id = 0;
 	}
 	else{
-		auto it = storage_nodes.upper_bound(cur_contact);
-		if (it == storage_nodes.end())
-			it = storage_nodes.begin();
-		cur_contact = *it;
+		auto it = node_table.nodes.upper_bound(cur_contact);
+		if (it == node_table.nodes.end())
+			it = node_table.nodes.begin();
+		cur_contact = it->first;
 		m.node_id = cur_contact;
 	}
 	m.length = 0;
@@ -73,7 +73,7 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			count[snodes[jt->second]] ++;
 		}
 		
-		fprintf(stderr, "\t\tset head and tail: %d possible donators\n", count.size());
+		fprintf(stderr, "\t\tset head and tail: %ld possible donators\n", count.size());
 
 		while (it != new_node) {
 
@@ -113,8 +113,27 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 	}
 
 
-	fprintf(stderr, "\t\tfind %d donators\n", donate_info.size());
+	fprintf(stderr, "\t\tfind %ld donators\n", donate_info.size());
 	return donate_info;
+}
+
+int GTStoreManager::manage_node_request_leave(Message &m, int fd){
+	int sid = m.node_id;
+	node_table.remove_storage_node(sid);
+	m.type = MANAGE_MASK|LEAVE_MASK;
+
+	for (auto& x: node_table.nodes) {
+		StorageNodeID nodeid = x.first;
+
+		assert (nodeid != sid);
+		int fd2 = openfd(storage_node_addr(nodeid).data());
+		if (fd2<0){
+			perror("wrong fd\n");
+		}
+		m.send(fd2);
+		close(fd2);
+	}
+	return 0;
 }
 
 int GTStoreManager::manage_node_request(Message &m, int fd){
@@ -125,11 +144,9 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	int sid = -1;
 	vector<VirtualNodeID> vvid = {};
 	node_table.add_storage_node(num_new_vnodes, sid, vvid);
-	node_table.nodes.insert(sid);
 
 	m.type = MSG_MANAGE_REPLY;
 	m.node_id = sid;
-	storage_nodes.insert(sid);
 
 	// copy to new node
 	if (m.data) delete[] m.data;
@@ -154,7 +171,8 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	// broadcast to old nodes
 	fprintf(stderr, "\t%s: Broadcast to storage nodes\n", __func__);
 
-	for (StorageNodeID nodeid = 0; nodeid < (int)node_table.nodes.size(); nodeid ++) {
+	for (auto& x: node_table.nodes) {
+		StorageNodeID nodeid = x.first;
 
 		if (m.data) delete[] m.data;
 		m.type = MSG_MANAGE_REPLY;
@@ -198,7 +216,10 @@ void GTStoreManager::exec(){
 		if (m.type & CLIENT_MASK) {
 			manage_client_request(m, connfd);
 		} else if (m.type & FORWARD_MASK) {
-			manage_node_request(m, connfd);
+			if (m.type & LEAVE_MASK)
+				manage_node_request_leave(m, connfd);
+			else
+				manage_node_request(m, connfd);
 		}
 		close(connfd);
 	}
