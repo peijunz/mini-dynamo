@@ -46,8 +46,8 @@ int main() {
         children.push_back(pid);
     }
     sleep(1);
-    for (int i=0; i<60; i++){
-        if (i&1) {
+    for (int i=0; i<0; i++){
+        if (1) {
 
             if ((pid = Fork()) == 0) {
                 printf("========================\n");
@@ -60,6 +60,7 @@ int main() {
             children.push_back(pid);
         } else {
             //continue;
+            
             if ((pid = Fork()) == 0) {
                 printf("========================\n");
                 printf("=== Running Client %d...\n", i);
@@ -70,8 +71,21 @@ int main() {
                 return 0;
             }
             children.push_back(pid);
+            
+                        /*
+            if ((pid = Fork()) == 0) {
+                printf("========================\n");
+                printf("=== Starting Storage Node %d...\n", i);
+                char *args_leave[] = {""};
+                execve("./storage", args_leave, env);
+                return 0;
+            }
+            usleep(300000);
+            printf("========================\n");
+            children.push_back(pid);
+            */
         }
-        //sleep(1);
+        sleep(1);
     }
 
     if(SIG_ERR == signal(SIGINT, _sig_handler)) {

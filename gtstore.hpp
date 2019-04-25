@@ -143,7 +143,7 @@ public:
 	void add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid);
 	void remove_storage_node(StorageNodeID sid);
 	VirtualNodeID find_virtual_node(string key);
-	VirtualNodeID find_neighbor_virtual_node(VirtualNodeID);
+	//VirtualNodeID find_neighbor_virtual_node(VirtualNodeID);
 
 	vector<pair<VirtualNodeID, StorageNodeID>> get_preference_list(string key, int size=1);
 
@@ -203,6 +203,8 @@ public:
 
 	// node functions
 	StorageNodeID find_coordinator(string key);
+	VirtualNodeID find_local_virtual_node(string key);
+	VirtualNodeID find_global_virtual_node(string key);
 	
 
 	// coordinator functions
