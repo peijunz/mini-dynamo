@@ -181,14 +181,14 @@ void GTStoreStorage::exec() {
         	perror("Accept fail");
 		}
 		Message m;
-		m.owner = string("storage_") + __func__;
+		m.owner = string("storage_") + to_string(id) + "_" + + __func__;
 		m.recv(connfd);
 		if (m.type & CLIENT_MASK) {
 			// Because client does not listen, we do not
 			// close client until we got a reply at process_forward_reply
 			process_client_request(m, connfd);
 		}
-		else if (m.type == MSG_MANAGE_REPLY){
+		else if (m.type & MSG_MANAGE_REPLY){
 			process_manage_reply(m, connfd);
 		}
 		else{
@@ -402,12 +402,50 @@ bool GTStoreStorage::process_donate_request(Message& m) {
 }
 
 
+
+/*
+void GTStoreStorage::collect_tokens(){
+	printf(">>> Collecting tokens...\n");
+	int todo = CONFIG_N;
+	int connfd;
+	vector<pair<int, int>> intervals;
+	vector<pair<string, Data>> kvlist;
+	while (todo){
+		connfd = accept(nodefd, NULL, NULL);
+    	if (connfd == -1) {
+        	perror("Accept fail");
+		}
+		Message m;
+		m.owner = __func__;
+		m.recv(connfd);
+		printf("\tGot token, todo=%d\n", todo);
+		assert(m.type == MSG_DONATE_REQUEST);
+		intervals = m.get_intervals();
+		printf("\tGet Donation size=%ld\n", intervals.size());
+		for (int i=0; i<(int)intervals.size(); i++){
+			m.recv(connfd);
+			kvlist = m.get_kv_list();
+			// TODO: Update kvlist to own storage
+			auto it = data.upper_bound(intervals[i].first);
+			if (it == data.end()) it = data.begin();
+			for (auto &x: kvlist){
+				it->second.insert(x);
+			}
+		}
+		todo--;
+		close(connfd);
+		sleep(1);
+	}
+	printf("<<< Done Collecting tokens...\n");
+
+}*/
+
 bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	
 	m.owner = __func__;
 	// a new node with id==m.node_id joins
 	printf(">>> GTStoreStorage::process_manage_reply: Entering");
-	m.owner = to_string(id) + __func__;
+	m.owner = to_string(id) + "_" + __func__;
 	node_table.nodes.insert(m.node_id);
 	int num_vnodes;
 	char*cur=m.data;
@@ -422,11 +460,14 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		cur += strnlen(cur, 24)+1;
 	}
 	node_table.add_storage_node(num_vnodes, m.node_id, vvid);
+	printf ("\tadd a new storage node !  Node ID = %d, New Node ID = %d\n", id, m.node_id);
 
-	if (node_table.nodes.size() > CONFIG_N){
+	if (node_table.nodes.size() > CONFIG_N && (m.type & DONATE_MASK)){
 		m.recv(fd);
+		close(fd);
 		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
-		fprintf(stderr, "\t\t%ld\n", intervals.size());
+
+		// assert (intervals.size()!=0);
 
 		if (intervals.size() == 0) {
 			return false;
@@ -453,7 +494,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 					}
 				}
 			}
-			fprintf(stderr, "00000000000000000000  Get kv list: size=%ld\n", kvlist.size());
+			// fprintf(stderr, "00000000000000000000  Get kv list: size=%ld\n", kvlist.size());
 
 		
 		}	
@@ -465,7 +506,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		// m.print("\t[[[  Donate  Data in interval  ]]] \n");
 		kvlist.clear();
 		close(bootfd);
-		m.print("\t[[[  Donated  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
+		// m.print("\t<<<  Donated  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 	}
 	
 	//close(fd);
@@ -475,10 +516,6 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	// 	return true;
 	// }
 	
-
-
-	printf ("\n<<< Successfully add a new node !  Node ID = %d, New Node ID = %d\n", id, m.node_id);
-
 	return true;
 }
 

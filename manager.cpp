@@ -148,18 +148,15 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 		if (fd2<0){
 			perror("wrong fd\n");
 		}
+		if (donate_info.count(nodeid))
+			m.type |= DONATE_MASK;
 		m.send(fd2, m.data);
-		if (node_table.nodes.size() > CONFIG_N){
+		if (node_table.nodes.size() > CONFIG_N && donate_info.count(nodeid)){
 			m.set_intervals(donate_info[nodeid]);
 			m.send(fd2, m.data);
 		}
 		close(fd2);
 	}
-
-
- 
-	if (m.data) delete[] m.data;
-	fprintf(stderr, "<<< %s: Exiting\n", __func__);
 
 	m.recv(fd);
 	close(fd);
