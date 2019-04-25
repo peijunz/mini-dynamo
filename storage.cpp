@@ -78,7 +78,7 @@ void GTStoreStorage::init(int num_vnodes) {
 	// m.node_id = -1;
 	m.send(fd);
 
-	printf("Inside GTStoreStorage::init() nodes %d/%d\n", node_table.nodes.size(), CONFIG_N);
+	printf("Inside GTStoreStorage::init() nodes %ld/%d\n", node_table.nodes.size(), CONFIG_N);
 	if (node_table.nodes.size() > CONFIG_N)
 		collect_tokens();
 
@@ -107,7 +107,7 @@ void GTStoreStorage::collect_tokens(){
 		m.recv(connfd);
 		assert(m.type == MSG_DONATE_REQUEST);
 		intervals = m.get_intervals();
-		for (int i=0; i<intervals.size(); i++){
+		for (int i=0; i<(int)intervals.size(); i++){
 			m.recv(connfd);
 			kvlist = m.get_kv_list();
 			// TODO: Update kvlist to own storage
@@ -206,8 +206,8 @@ void GTStoreStorage::exec() {
 bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	// Find coordinator and forward request
 	assert(node_table.nodes.size() >= CONFIG_N);
-	int offset = strnlen(m.data, m.length)+1;
-	char *val = m.data + offset;
+	// int offset = strnlen(m.data, m.length)+1;
+	// char *val = m.data + offset;
 	StorageNodeID sid = find_coordinator(m.data);
 	forward_tasks[m.client_id] = fd;
 
@@ -284,7 +284,7 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 
 
 bool GTStoreStorage::process_forward_reply(Message& msg) {
-	assert(("no client socket stored", forward_tasks.count(msg.client_id)!=0));
+	assert(forward_tasks.count(msg.client_id)!=0);
 	printf(">>> Send back to client\n");
 	int clientfd = forward_tasks[msg.client_id];
 	msg.type = MSG_CLIENT_REPLY;
@@ -333,7 +333,7 @@ bool GTStoreStorage::finish_coordination(Message &m, string &key){
 	if (m.node_id == id) {
 		printf("\titnew_node is the coordinator\n");
 		m.set_key_data(key, working_tasks[m.client_id].second);
-		printf("\tSIZE of forward tasks for node %d is %d\n", id, forward_tasks.size());
+		printf("\tSIZE of forward tasks for node %d is %ld\n", id, forward_tasks.size());
 		process_forward_reply(m);
 	} else {
 		printf("\tsend back to transferrer\n");
@@ -405,7 +405,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	cur += strnlen(cur, 24)+1;
 	vector<VirtualNodeID> vvid(num_vnodes);
 	printf ("\t%d join, %d vnodes\n", m.node_id, num_vnodes);
-	printf ("\t%.*s\n", m.length, m.data);
+	printf ("\t%.*s\n", (int)m.length, m.data);
 	assert(m.length);
 	for (int i=0; i<num_vnodes; i++) {
 		sscanf(cur, "%d", &vvid[i]);
@@ -416,7 +416,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	if (node_table.nodes.size() > CONFIG_N){
 		m.recv(fd);
 		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
-		fprintf(stderr, "\t\t%d\n", intervals.size());
+		fprintf(stderr, "\t\t%ld\n", intervals.size());
 
 		int bootfd = openfd(storage_node_addr(m.node_id).data());
 		if (bootfd < 0){
@@ -428,7 +428,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		m.print("\t[[[  Donate  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 		vector<pair<string, Data>> kvlist;
 
-		for (int i=0; i<intervals.size(); i++){
+		for (int i=0; i<(int)intervals.size(); i++){
 			// Extract kv list
 			auto it = data.upper_bound(intervals[i].first);
 			if (it == data.end()) it = data.begin();
@@ -440,14 +440,14 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 					}
 				}
 			}
-			fprintf(stderr, "00000000000000000000  Get kv list: size=%d\n", kvlist.size());
+			fprintf(stderr, "00000000000000000000  Get kv list: size=%ld\n", kvlist.size());
 
 			// Send
 			m.type = MSG_DONATE_REQUEST;
 			m.set_kv_list(kvlist);
-			m.print("\t[[[  Donate  Data in interval  ]]] \n");
+			// m.print("\t[[[  Donate  Data in interval  ]]] \n");
 			m.send(bootfd, m.data);
-			m.print("\t[[[  Donate  Data in interval  ]]] \n");
+			// m.print("\t[[[  Donate  Data in interval  ]]] \n");
 			kvlist.clear();
 		}
 	}

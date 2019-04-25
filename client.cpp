@@ -124,7 +124,7 @@ int Message::send(int fd, const char *content){
 	assert((length>0) ^ (content==NULL));
 	fprintf(stderr, "start to send message.....\n");
 	if (content){
-		if (rio_writen(fd, content, length) != length){
+		if (rio_writen(fd, content, length) == -1){
 			printf("Write error\n");
 			exit(-1);
 		}
@@ -177,11 +177,10 @@ int Message::set_key_data(string key, Data data) {
 		return -1;
 	if (this->data) delete[] this->data;
 	this->data = new char[key.size()+1 + data.get_length()];
-	char*cur=this->data;
 	length = 0;
 	length += 1 + key.size();
 	strcpy(this->data, key.data());
-	length += 1 + sprintf(this->data + length, "%lld", data.version);
+	length += 1 + sprintf(this->data + length, "%ld", data.version);
 	strcpy(this->data + length, data.value.data());
 	length += 1+data.value.size();
 	return 0;
@@ -190,11 +189,11 @@ int Message::get_key_data(string& key, Data& data) {
 	char*cur=this->data;
 	key = cur;
 	cur += 1+strlen(cur);
-	sscanf(cur, "%lld", &data.version);
+	sscanf(cur, "%ld", &data.version);
 	cur += 1+strlen(cur);
 	data.value = cur;
 	cur += 1+strlen(cur);
-	// printf("Received %s %lld %s\n", key.data(), data.version, data.value.data());
+	// printf("Received %s %ld %s\n", key.data(), data.version, data.value.data());
 	return 0;
 }
 
@@ -209,12 +208,12 @@ int Message::set_kv_list(vector<pair<string, Data>>& kvs){
 	this->data = new char[bufsize];
 	length = 0;
 	// Serialization
-	length += 1 + sprintf(this->data + length, "%d", kvs.size());
+	length += 1 + sprintf(this->data + length, "%ld", kvs.size());
 	for (auto &x:kvs){
 		strcpy(this->data+length, x.first.data());
 		length += 1 + x.first.size();
 
-		length += 1 + sprintf(this->data + length, "%lld", x.second.version);
+		length += 1 + sprintf(this->data + length, "%ld", x.second.version);
 
 		strcpy(this->data + length, x.second.value.data());
 		length += 1 + x.second.value.size();
@@ -236,7 +235,7 @@ vector<pair<string, Data>> Message::get_kv_list(){
 		key = cur;
 		cur += 1+strlen(cur);
 
-		sscanf(cur, "%lld", &data.version);
+		sscanf(cur, "%ld", &data.version);
 		cur += 1+strlen(cur);
 
 		data.value = cur;
@@ -256,7 +255,7 @@ int Message::set_intervals(vector<pair<VirtualNodeID, VirtualNodeID>>& intervals
 		this->data = new char[bufsize];
 		length = 0;
 		// Serialization
-		length += 1 + sprintf(this->data + length, "%d", intervals.size());
+		length += 1 + sprintf(this->data + length, "%ld", intervals.size());
 		for (auto &x:intervals){
 			length += 1 + sprintf(this->data + length, "%d %d", x.first, x.second);
 		}
@@ -337,7 +336,7 @@ vector<pair<VirtualNodeID, StorageNodeID>> NodeTable::get_preference_list(string
 	unordered_map<StorageNodeID, VirtualNodeID>	pref_map;
 	vector<pair<VirtualNodeID, StorageNodeID>>	pref_list;
 	int cycle=0;
-	while (pref_map.size()<size) {
+	while ((int)pref_map.size()<size) {
 		if (it == virtual_nodes.end()){
 			if (cycle ==1){
 				// Infinite loop

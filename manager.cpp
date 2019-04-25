@@ -136,7 +136,7 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	// broadcast to old nodes
 	fprintf(stderr, "\t%s: Broadcast to storage nodes\n", __func__);
 
-	for (StorageNodeID nodeid = 0; nodeid < node_table.nodes.size(); nodeid ++) {
+	for (StorageNodeID nodeid = 0; nodeid < (int)node_table.nodes.size(); nodeid ++) {
 
 		if (m.data) delete[] m.data;
 		m.type = MSG_MANAGE_REPLY;

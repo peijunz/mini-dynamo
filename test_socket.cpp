@@ -46,7 +46,6 @@ int main() {
         if ((pid = Fork()) == 0) {
             printf("========================\n");
             printf("=== Running Client %d...\n", i);
-            char key[32], val[32];
             GTStoreClient client;
             client.init(i);
             client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
@@ -55,7 +54,6 @@ int main() {
         }
         children.push_back(pid);
     }
-    int status;
 
     if(SIG_ERR == signal(SIGINT, _sig_handler)) {
         fprintf(stderr, "Unable to catch SIGINT...exiting.\n");

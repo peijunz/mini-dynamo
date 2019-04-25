@@ -9,19 +9,19 @@ OBJS =  client.o
 all: $(TESTS)
 
 client.o:
-	$(CC) $(CFLAGS) -c client.cpp -o client.o
+	$(CC) $(CPPFLAGS) -c client.cpp -o client.o
 
 manager: $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) manager.cpp -o manager
+	$(CC) $(CPPFLAGS) $(OBJS) manager.cpp -o manager
 
 storage: $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) storage.cpp -o storage
+	$(CC) $(CPPFLAGS) $(OBJS) storage.cpp -o storage
 
 test_app: $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) test_app.cpp -o test_app
+	$(CC) $(CPPFLAGS) $(OBJS) test_app.cpp -o test_app
 
 clean:
 	$(RM) *.o $(TESTS) *.socket*
 
 test_socket: $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) test_socket.cpp -o test_socket
+	$(CC) $(CPPFLAGS) $(OBJS) test_socket.cpp -o test_socket
