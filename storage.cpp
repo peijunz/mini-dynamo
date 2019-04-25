@@ -21,26 +21,31 @@ void GTStoreStorage::leave() {
 	}
 	*/
 	// find new location for its data
-	for (auto& x: data) {
-		for (auto& y: x.second) {
-			auto replica = node_table.get_preference_list(y.first, CONFIG_N + 1);
-			auto& dest = to_send[replica.back().second];
-			dest.push_back(y);
+	if (node_table.nodes.size()>CONFIG_N){
+		for (auto& x: data) {
+			for (auto& y: x.second) {
+				auto replica = node_table.get_preference_list(y.first, CONFIG_N + 1);
+				auto& dest = to_send[replica.back().second];
+				dest.push_back(y);
+			}
 		}
-	}
 
 
-	for (auto &x:to_send){
-	    int sendfd = openfd(storage_node_addr(x.first).data());
-		if (sendfd < 0){
-			perror("send tokens");
-			exit(1);
+		for (auto &x:to_send){
+			int sendfd = openfd(storage_node_addr(x.first).data());
+			if (sendfd < 0){
+				perror("send tokens");
+				exit(1);
+			}
+			m.set_kv_list(x.second);
+			m.type = MSG_DONATE_REQUEST;
+			m.send(sendfd, m.data);
+			close(sendfd);
 		}
-		m.set_kv_list(x.second);
-		m.send(sendfd, m.data);
-		close(sendfd);
 	}
 	/// Detach from manager
+	m.type = FORWARD_MASK|LEAVE_MASK;
+	m.length = 0;
     m.send(fd);
 	close(fd);
 	return;
@@ -253,6 +258,7 @@ void GTStoreStorage::exec() {
 			{
 				case MSG_DONATE_REQUEST:
 					process_donate_request(m);
+					break;
 				case MSG_FORWARD_REPLY:
 					process_forward_reply(m);
 					break;
@@ -351,7 +357,10 @@ bool GTStoreStorage::process_forward_request(Message& m) {
 
 
 bool GTStoreStorage::process_forward_reply(Message& msg) {
+	// printf("msg clientid is %d\n", msg.client_id);
+	// cout<<"TYPE: "<<typestr(msg.type)<<endl;
 	assert(forward_tasks.count(msg.client_id)!=0);
+
 	printf(">>> Send back to client\n");
 	int clientfd = forward_tasks[msg.client_id];
 	msg.type = MSG_CLIENT_REPLY;
@@ -454,6 +463,7 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 }
 
 bool GTStoreStorage::process_donate_request(Message& m) {
+	printf("Process donate req\n");
 	vector<pair<string, Data>> kvlist = m.get_kv_list();
 	for (auto& kv : kvlist) {
 		//VirtualNodeID vid = find_global_virtual_node(kv.first);
@@ -558,6 +568,7 @@ GTStoreStorage storage;
 static void _sig_handler(int signo) {
     if(signo == SIGINT || signo == SIGTERM) {
 		storage.leave();
+		exit(1);
     }
 }
 

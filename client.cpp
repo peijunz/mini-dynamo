@@ -84,6 +84,8 @@ string typestr(int type){
 		s += "_REP";
 	if (type & DONATE_MASK)
 		s += "_DNT";
+	if (type & LEAVE_MASK)
+		s += "_LEA";
 	if (type & ERROR_MASK)
 		s += "_ERR";
 	return s;
@@ -109,7 +111,7 @@ int Message::send(int fd, const char *content){
 		perror("Write error\n");
 		exit(-1);
 	}
-	assert((length>0) ^ (content==NULL));
+	assert((length==0) || content);
 	// fprintf(stderr, "start to send message.....\n");
 	if (content){
 		if (rio_writen(fd, content, length) == -1){

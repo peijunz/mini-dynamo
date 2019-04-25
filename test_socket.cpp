@@ -5,11 +5,14 @@ vector<int> children;
 
 static void _sig_handler(int signo) {
     if(signo == SIGINT || signo == SIGTERM) {
-        for(auto it=children.rbegin(); it!=children.rend(); it++){
-            int pid = *it;
+        for(int i=1; i<children.size(); i++){
+            int pid = children[i];
             kill(pid, SIGTERM);
             waitpid(pid, NULL, NULL);
+            sleep(1);
         }
+        kill(children[0], SIGTERM);
+    	exit(1);
     }
 }
 
@@ -36,7 +39,7 @@ int main() {
     }
     children.push_back(manager_id);
     sleep(1);
-    for (int i=0; i<5; i++){
+    for (int i=0; i<8; i++){
         if ((pid = Fork()) == 0) {
             printf("========================\n");
             printf("=== Starting Storage Node %d...\n", i);
@@ -48,8 +51,8 @@ int main() {
         children.push_back(pid);
     }
     sleep(1);
-    for (int i=0; i<0; i++){
-        if (1) {
+    for (int i=0; i<1; i++){
+        if (0) {
 
             if ((pid = Fork()) == 0) {
                 printf("========================\n");
@@ -99,7 +102,7 @@ int main() {
         fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
         exit(1);
     }
-    sleep(10);
+    sleep(5);
     _sig_handler(SIGINT);
     return 0;
 }
