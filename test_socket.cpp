@@ -5,8 +5,10 @@ vector<int> children;
 
 static void _sig_handler(int signo) {
     if(signo == SIGINT || signo == SIGTERM) {
-        for(int pid:children){
+        for(auto it=children.rbegin(); it!=children.rend(); it++){
+            int pid = *it;
             kill(pid, SIGTERM);
+            waitpid(pid, NULL, NULL);
         }
     }
 }
@@ -46,7 +48,7 @@ int main() {
         children.push_back(pid);
     }
     sleep(1);
-    for (int i=0; i<60; i++){
+    for (int i=0; i<8; i++){
         if (i&1) {
 
             if ((pid = Fork()) == 0) {
@@ -83,7 +85,7 @@ int main() {
         fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
         exit(1);
     }
-    sleep(15);
+    sleep(5);
     _sig_handler(SIGINT);
     return 0;
 }
