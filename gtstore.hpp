@@ -52,7 +52,8 @@ public:
 #define REPLY_MASK 1<<5
 #define DONATE_MASK 1<<6
 #define KV_MASK 1<<7
-#define ERROR_MASK 1<<8
+#define LEAVE_MASK 1<<7
+#define ERROR_MASK 1<<9
 
 
 typedef int VirtualNodeID;
@@ -131,15 +132,16 @@ public:
 	map<size_t, VirtualNodeID>	virtual_nodes;
 	map<VirtualNodeID, StorageNodeID> 	storage_nodes;
 
-	unordered_set<StorageNodeID> 	nodes;
+	map<StorageNodeID, vector<VirtualNodeID>> 	nodes;
 	
 
 	NodeTable(){};
 	~NodeTable(){};
 
 	void add_virtual_node(VirtualNodeID vid = -1);
+	void remove_virtual_node(VirtualNodeID vid = -1);
 	void add_storage_node(int num_vnodes, StorageNodeID& sid, vector<VirtualNodeID>& vvid);
-
+	void remove_storage_node(StorageNodeID sid);
 	VirtualNodeID find_virtual_node(string key);
 	VirtualNodeID find_neighbor_virtual_node(VirtualNodeID);
 
@@ -162,9 +164,10 @@ public:
 	void init();
 	void exec();
 	int cur_contact=-1;
-	set<StorageNodeID>	storage_nodes;
+	// set<StorageNodeID>	storage_nodes;
 	int manage_client_request(Message& m, int fd);
 	int manage_node_request(Message& m, int fd);
+	int manage_node_request_leave(Message& m, int fd);
 
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>>
 	donate_information(vector<VirtualNodeID>&);
@@ -212,6 +215,7 @@ public:
 	// Exclusive connection to client/manager
 	bool process_client_request(Message& msg, int fd);
 	bool process_manage_reply(Message& msg, int fd);
+	bool process_manage_reply_leave(Message& msg, int fd);
 	//// TODO: leave
 
 

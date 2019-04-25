@@ -41,7 +41,7 @@ int main() {
             execve("./storage", args, env);
             return 0;
         }
-        usleep(300000);
+        // usleep(300000);
         printf("========================\n");
         children.push_back(pid);
     }
