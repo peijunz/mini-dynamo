@@ -156,12 +156,12 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 		close(fd2);
 	}
 
-	if (m.data) delete[] m.data;
-	fprintf(stderr, "<<< %s: Exiting\n", __func__);
 
 
 	m.recv(fd);
 	close(fd);
+	fprintf(stderr, "<<< %s: Exiting\n", __func__);
+
 	return 0;
 }
 

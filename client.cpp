@@ -113,8 +113,9 @@ int Message::set(int t, int cid, int nid, int l){
 }
 
 int Message::send(int fd, const char *content){
-	char header[256];
+	char header[128];
 	print(owner + " Send");
+	printf("start to send header.....\n");
 
 	sprintf(header, "%d %d %d %d %d %ld\n", type, client_id, node_id, coordinator_id, vid, length);
 	if (rio_writen(fd, header, strlen(header)) == -1){
@@ -156,9 +157,11 @@ int Message::recv(int fd){
 Message::~Message(){
 	if (data!=NULL)
 		delete[] data;
+	data = NULL;
 }
 
 void Message::print(string info){
+	// printf("aaaaa\n");
 	printf("\t%s: %d(%s) %d %d %ld\n", info.data(), type, typestr(type).data(), client_id, node_id, length);
 	if (length && data){
 		char*buf=new char[length+1];
@@ -170,6 +173,7 @@ void Message::print(string info){
 		printf("\tContent: %.*s\n\n", (int)length, buf);
 		delete[] buf;
 	}
+	// printf("bbbbb\n");
 };
 
 int Message::set_key_data(string key, Data data) {

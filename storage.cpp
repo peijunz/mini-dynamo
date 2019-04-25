@@ -84,6 +84,7 @@ void GTStoreStorage::init(int num_vnodes) {
 
     m.length = 0;
 	// m.node_id = -2;
+	fprintf(stderr, "\t----ACK sending----\n");
 	m.send(fd);
 	fprintf(stderr, "\t----ACK sent----\n");
 	close(fd);
@@ -451,6 +452,8 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 			// m.print("\t[[[  Donate  Data in interval  ]]] \n");
 			kvlist.clear();
 		}
+		close(bootfd);
+		m.print("\t[[[  Donated  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 	}
 	
 	close(fd);

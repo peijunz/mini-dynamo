@@ -51,6 +51,7 @@ public:
 #define WRITE_MASK 1<<4
 #define REPLY_MASK 1<<5
 #define DONATE_MASK 1<<6
+#define KV_MASK 1<<7
 #define ERROR_MASK 1<<8
 
 

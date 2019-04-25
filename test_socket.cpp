@@ -22,12 +22,14 @@ int Fork(){
 
 int main() {
     int manager_id, pid;
+    char *args[] = { 0 }; /* each element represents a command line argument */
+    char *env[] = { 0 }; /* leave the environment list null */
     if ((manager_id = Fork()) == 0) {
         unlink(manager_addr);
         printf("========================\n");
         printf("=== Starting Manager with (N=%d, R=%d, W=%d, V=%d)\n",\
                 CONFIG_N, CONFIG_R, CONFIG_W, CONFIG_V);
-        execve("./manager", NULL, NULL);
+        execve("./manager", args, env);
         return 0;
     }
     children.push_back(manager_id);
@@ -36,7 +38,7 @@ int main() {
         if ((pid = Fork()) == 0) {
             printf("========================\n");
             printf("=== Starting Storage Node %d...\n", i);
-            execve("./storage", NULL, NULL);
+            execve("./storage", args, env);
             return 0;
         }
         children.push_back(pid);
