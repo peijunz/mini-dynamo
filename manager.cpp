@@ -42,11 +42,13 @@ int GTStoreManager::manage_client_request(Message &m, int fd){
 	printf("<<< %s: Exiting\n", __func__);
 	return 0;
 }
+
 unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>>>
 GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 
 	// compute donate information
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>> >	donate_info;
+
 	for (VirtualNodeID vid : vvid) {
 		fprintf(stderr, "\tcomputing.......%u\n", vid);
 		// head: k previous

@@ -556,7 +556,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		vector<pair<string, Data>> kvlist;
 
 		fprintf(stderr, "\t Before KV List: %ld  intervals: %ld\n", kvlist.size(), intervals.size());
-
+/*
 		for (int i=0; i<(int)intervals.size(); i++){
 			// Extract kv list
 			auto it = data.upper_bound(intervals[i].first);
@@ -577,6 +577,27 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 
 		
 		}	
+*/
+		for (auto& x : data) {
+			for (auto it = x.second.begin(); it != x.second.end(); ) {
+				auto pref_list = node_table.get_preference_list(it->first, CONFIG_N + 1);
+				bool in_new = false;
+				for (auto& p : pref_list) {
+					if (p.second == m.node_id) {
+						in_new = true;
+						break;
+					}
+				}
+				bool me_last = pref_list.back().second == id;
+				if (in_new && me_last) {
+					kvlist.push_back(*it);
+					it = x.second.erase(it);
+				} else {
+					it ++;
+				}
+			}
+		}
+
 
 		fprintf(stderr, "\t Finish KV List: %ld\n", kvlist.size());
 
