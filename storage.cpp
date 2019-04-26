@@ -613,9 +613,9 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		// m.print("\t[[[  Donate  Data in interval  ]]] \n");
 		kvlist.clear();
 		close(bootfd);
-		verify_data();
 		// m.print("\t<<<  Donated  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 	}
+	verify_data();
 	
 	//close(fd);
 
