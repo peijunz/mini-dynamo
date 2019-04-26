@@ -50,24 +50,26 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 	unordered_map<StorageNodeID, vector<pair<VirtualNodeID, VirtualNodeID>> >	donate_info;
 	node_table.print_ring();
 	for (VirtualNodeID vid : vvid) {
-		fprintf(stderr, "\tcomputing.......%u\n", vid);
+		printf("\tcomputing.......%u\n", vid);
 		// head: k previous
 		auto& vnodes = node_table.virtual_nodes;
 		auto& snodes = node_table.storage_nodes;
 		auto new_node = vnodes.find(node_table.consistent_hash(virtual_node_addr(vid)));
 		auto it = new_node;
 		unordered_map<VirtualNodeID, int> count;
+		printf(">>>>>>>>>>>>>> %d\n", it->second);
 		while(1) {
 			count[snodes[it->second]] ++;
 			if (count.size() == CONFIG_N+1){
 				break;
 			}
-			if (snodes[it->second] == snodes[new_node->second] || it == new_node) 
+			if (snodes[it->second] == snodes[new_node->second] && it != new_node) 
 			//if (it == new_node)
 				break;			
 			if (it == vnodes.begin())
 				it = prev(vnodes.end());
 			else it --;
+		printf(">>>>>>>>>>>>>> %d\n", it->second);
 		}
 			// it++;
 			// if (it == vnodes.end())
@@ -98,11 +100,11 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			//
 			VirtualNodeID vid_start = it->second;
 
+			if (--count[snodes[it->second]] == 0)
+				count.erase(snodes[it->second]);
 			it++;
 			if (it == vnodes.end())
 				it = vnodes.begin();
-			if (--count[snodes[it->second]] == 0)
-				count.erase(snodes[it->second]);
 
 			while (count.size() < CONFIG_N+1) {
 				jt ++;
@@ -115,11 +117,11 @@ GTStoreManager::donate_information(vector<VirtualNodeID>&vvid){
 			StorageNodeID sid_donate = snodes[jt->second];
 
 			donate_info[sid_donate].push_back({vid_start, vid_end});
-			fprintf(stderr, "\t\t||||----Donate: %d, [%d, %d)----||||\n", sid_donate, vid_start, vid_end);
+			printf("\t\t||||----Donate: %d, [%d, %d)----||||\n", sid_donate, vid_start, vid_end);
 
 		}
 	}
-
+	// exit(1);
 
 	fprintf(stderr, "\t\tfind %ld donators\n", donate_info.size());
 	return donate_info;
