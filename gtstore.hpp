@@ -221,7 +221,6 @@ public:
 	bool process_client_request(Message& msg, int fd);
 	bool process_manage_reply(Message& msg, int fd);
 	bool process_manage_reply_leave(Message& msg, int fd);
-	//// TODO: leave
 
 	void print_ring();
 	void print_data();
