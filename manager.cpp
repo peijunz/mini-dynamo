@@ -148,7 +148,7 @@ int GTStoreManager::manage_node_request_leave(Message &m, int fd){
 }
 
 int GTStoreManager::manage_node_request(Message &m, int fd){
-	// Manage entrance and exit status of nodes
+	// Manage entrance of nodes
 	int num_new_vnodes;
 	sscanf(m.data, "%d", &num_new_vnodes);
 	printf(">>> %s: Entering with %d requested vnodes\n", __func__, num_new_vnodes);
@@ -202,10 +202,10 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 		if (donate_info.count(nodeid))
 			m.type |= DONATE_MASK;
 		m.send(fd2, m.data);
-		if (node_table.nodes.size() > CONFIG_N && donate_info.count(nodeid)){
-			m.set_intervals(donate_info[nodeid]);
-			m.send(fd2, m.data);
-		}
+		// if (node_table.nodes.size() > CONFIG_N && donate_info.count(nodeid)){
+		// 	m.set_intervals(donate_info[nodeid]);
+		// 	m.send(fd2, m.data);
+		// }
 		close(fd2);
 	}
 

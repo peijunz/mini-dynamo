@@ -540,8 +540,8 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	printf ("\tadd a new storage node !  Node ID = %d, New Node ID = %d\n", id, m.node_id);
 
 	if (node_table.nodes.size() > CONFIG_N && (m.type & DONATE_MASK)){
-		m.recv(fd);
-		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
+		// m.recv(fd);
+		// vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
 
 		// assert (intervals.size()!=0);
 
@@ -555,7 +555,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		//m.send(bootfd, m.data);
 		vector<pair<string, Data>> kvlist;
 
-		fprintf(stderr, "\t Before KV List: %ld  intervals: %ld\n", kvlist.size(), intervals.size());
+		// fprintf(stderr, "\t Before KV List: %ld  intervals: %ld\n", kvlist.size(), intervals.size());
 /*
 		for (int i=0; i<(int)intervals.size(); i++){
 			// Extract kv list
