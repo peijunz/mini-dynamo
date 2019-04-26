@@ -35,7 +35,6 @@ int create_storage_node(int i) {
         execve("./storage", args, env);
         return 0;
     }
-    // usleep(300000);
     printf("========================\n");
     children.push_back(pid);
     return pid;
@@ -92,7 +91,7 @@ int main() {
         kill(pid, SIGTERM);
         waitpid(pid, NULL, NULL);
         pid = create_storage_node(i+2*CONFIG_N);
-        // usleep(3e5);
+        usleep(3e5);
     }
 
     printf("======================== DEBUG 2================\n");

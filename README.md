@@ -145,22 +145,6 @@ In this test, we can verify following functionalities:
 
 
 
-
-
-
-## Initial Implementation
-+ Every message establish a new socket
-+ Later improvement by event-driven model
-
-"13 clientid nodeid length\ngchsyhesgeyjrhnjyadbyuj"
-
 # References
 + Stevens, W. Richard, and Stephen A. Rago. Advanced programming in the UNIX environment. Addison-Wesley, 2008.
 
-
-
-
-
-
-
-0 1 2 3 4 5 5 5 4 3 2 1 0
