@@ -35,7 +35,6 @@ int create_storage_node(int i) {
         execve("./storage", args, env);
         return 0;
     }
-    // usleep(300000);
     printf("========================\n");
     children.push_back(pid);
     return pid;
@@ -45,7 +44,6 @@ int create_storage_node(int i) {
 int main() {
     int manager_id, pid;
     if ((manager_id = Fork()) == 0) {
-        unlink(manager_addr);
         printf("========================\n");
         printf("=== Starting Manager with (N=%d, R=%d, W=%d, V=%d)\n",\
                 CONFIG_N, CONFIG_R, CONFIG_W, CONFIG_V);

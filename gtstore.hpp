@@ -164,6 +164,7 @@ public:
 	NodeTable node_table;
 	void init();
 	void exec();
+	void leave();
 	int cur_contact=-1;
 	// set<StorageNodeID>	storage_nodes;
 	int manage_client_request(Message& m, int fd);

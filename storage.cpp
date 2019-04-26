@@ -59,6 +59,7 @@ void GTStoreStorage::leave() {
     m.send(fd);
 	m.recv(fd);
 	close(fd);
+	unlink(storage_node_addr(id).data());
 	return;
 }
 
@@ -565,7 +566,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		vector<pair<string, Data>> kvlist;
 
 		fprintf(stderr, "\t Before KV List: %ld  intervals: %ld\n", kvlist.size(), intervals.size());
-
+/*
 		for (int i=0; i<(int)intervals.size(); i++){
 			// Extract kv list
 			auto it = data.upper_bound(intervals[i].first);
@@ -584,8 +585,8 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 			}
 			// fprintf(stderr, "00000000000000000000  Get kv list: size=%ld\n", kvlist.size());
 		}	
+*/
 
-/*
 		for (auto& x : data) {
 			for (auto it = x.second.begin(); it != x.second.end(); ) {
 				auto pref_list = node_table.get_preference_list(it->first, CONFIG_N + 1);
@@ -605,7 +606,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 				}
 			}
 		}
-*/
+
 
 		fprintf(stderr, "\t Finish KV List: %ld\n", kvlist.size());
 
