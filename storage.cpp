@@ -315,6 +315,15 @@ bool GTStoreStorage::process_client_request(Message& m, int fd) {
 	StorageNodeID sid = find_coordinator(m.data);
 	forward_tasks[m.client_id] = fd;
 
+	// use timestamp as data version
+	if (m.type | WRITE_MASK) {
+		string key;
+		Data data;
+		m.get_key_data(key, data);
+		data.version = time(NULL);
+		m.set_key_data(key, data);
+	}
+
 	m.node_id = id;
 	if (sid == id){
 		// Do not forward, reply and then close
@@ -476,7 +485,7 @@ bool GTStoreStorage::process_coordinate_reply(Message& m) {
 	m.get_key_data(key, data);
 	working_tasks[m.client_id].first ++;
 
-	if ((m.type & WRITE_MASK) ||
+	if ((m.type & WRITE_MASK) &&
 		data.version >= working_tasks[m.client_id].second.version)
 	{
 		// new version, update result

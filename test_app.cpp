@@ -64,9 +64,13 @@ int main() {
             printf("=== Running Client %d...\n", i);
             GTStoreClient client;
             client.init(i);
-            client.put("test_key_"+to_string(i), "test_val_"+to_string(i));
+            client.put("test_key_"+to_string(i), "test_val_"+to_string(i)+"_version=0");
             client.get("test_key_"+to_string(i));
-            sleep(5);
+            sleep(2);
+            client.put("test_key_"+to_string(i), "test_val_"+to_string(i)+"_version=1");
+            sleep(2);
+            client.put("test_key_"+to_string(i), "test_val_"+to_string(i)+"_version=2");
+            sleep(1);
             client.get("test_key_"+to_string(i));
             return 0;
         }

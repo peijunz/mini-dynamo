@@ -67,7 +67,6 @@ int read_line(int fd, char* buf, int n) {
 	return -1;
 }
 
-
 string typestr(int type){
 	string s="T";
 	if (type & CLIENT_MASK)
@@ -271,7 +270,7 @@ vector<pair<VirtualNodeID, VirtualNodeID>> Message::get_intervals(){
 
 
 
-///////////////    Node  Table
+///////////////    Node  Table     ////////////////
 
 
 
@@ -365,14 +364,11 @@ void NodeTable::print_ring() {
 
 
 
+///////////////////////       Client          /////////////////////////////
 
 
 
 
-
-
-
-////////////////////////////////////////////////////
 int GTStoreClient::get_contact_node(int id) {
     int fd = openfd(manager_addr);
     if (fd < 0){

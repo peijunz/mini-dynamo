@@ -17,6 +17,7 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <time.h>
 
 using namespace std;
 
@@ -51,16 +52,13 @@ public:
 #define WRITE_MASK 1<<4
 #define REPLY_MASK 1<<5
 #define DONATE_MASK 1<<6
-#define KV_MASK 1<<7
 #define LEAVE_MASK 1<<7
 #define DEBUG_MASK 1<<8
 #define ERROR_MASK 1<<9
 
-
 typedef int VirtualNodeID;
 typedef int StorageNodeID;
 typedef int ClientID;
-
 
 typedef enum {
 	MSG_CLIENT_REQUEST = CLIENT_MASK,

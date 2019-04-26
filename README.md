@@ -1,13 +1,15 @@
 # Project 4 - GTStore
 Peijun Zhu, Zilong Lyu
 
-## Design
+
+
+## Overview
 
 In this project we implemented a distributed key-value store (GTStore) system. Nodes in this system communicate with Unix Domain Socket. 
 
 Our network topology as a fully connected graph among storage nodes and manager.
 
-Because we potentially need to migrate virtual nodes among storage nodes, the data is stored in different sectors corresponding to different virtual nodes(token). In this way, getting new tokens or sending tokens is very easy.
+Because we need to migrate virtual nodes among storage nodes, the data is stored in different sectors corresponding to different virtual nodes(token). In this way, getting new tokens or sending tokens is very easy.
 
 
 
@@ -17,12 +19,12 @@ Because we potentially need to migrate virtual nodes among storage nodes, the da
 
 - Consistent hashing is used to partition data on different virtual nodes.
 - Each storage node stores data of multiple virtual nodes.
-- As storage nodes can dynamically join or leave the system, so data can be moved from one node to another. This process is called *donation*. 
+- As storage nodes can dynamically join or leave the system, data can be moved from one node to another. This process is called *donation*. 
 
 #### Replication
 
 - Each *key-value* pair is stored in $N$ **Storage** nodes. These nodes make up of a *preference list*.
-- The replication parameter $N$ is 3 as default.
+- The replication parameter $N$ is 5 as default.
 
 #### Consistency
 
@@ -30,7 +32,8 @@ Because we potentially need to migrate virtual nodes among storage nodes, the da
 - A *write* task is completed if at least $W$ nodes send results back to the coordinator.
 - As long as $R/W$ results are collected, later results will be ignored.
 - If multiple versions of results are retrieved, the latest version wins.
-- The default value of $R$ and $W$ is 2.
+- There could be multiple versions of data stored in the system. However, as long as $R+W>N$, there must be node storing data of latest version.
+- The default value of $R$ and $W$ is 3.
 
 
 
@@ -70,6 +73,19 @@ Because we potentially need to migrate virtual nodes among storage nodes, the da
 - More virtual nodes could guarantee keys are balanced among storage nodes
 
 
+
+## Design Tradoffs
+
+#### Pros
+
+- Client does not need to store or keep track of global information. Every client is allocated to a fixed storage node to communicate. This reduces traffics between clients and manager, which benefits a lot when there are a huge number of clients/storage nodes.
+- All storage nodes have copies of global information. Based on local information, every storage node can find *preference list* and know where to put data by itself, which reduces a lot of communication between storage nodes and managers.
+- Manager always keeps track of global information and notifies storage nodes when update is required. This helps keep state consistency among all storage nodes.
+- A storage node needs to **sync** to manager when initializing itself. Synchronized by the manager, multiple nodes joins at the same time without data race.
+
+#### Cons
+
+- When a new nodes joins, it needs some time to set up. When it leaves, it also needs time to donate its own data to other nodes. If there are some other node leaving during this process, there could be state inconsistency among nodes and the communication could fail. Thus, we assume that no other nodes leave when there is a node currently joining or leaving. To ensure this, we need to wait a bit of time before starting/ending another node.
 
 
 
@@ -120,47 +136,26 @@ In ```test_app.cpp```, we do the following things:
 
 In this test, we can verify following functionalities:
 
-- 
+- **Setup**: All nodes can start correctly. 
+- **Request**: All clients *get* correct values after *putting* them into the system.
+- **Join**: When a new node joins, old nodes can donate a part of their data to this new node.
+- **Leave**: When a node leaves, it donates its data to other working nodes.
+- **Data Persistence**: After removing and creating many nodes, we don't lose data and clients can still *get* correct values.
 
 
 
 
 
+## Implementing Issues
 
-
-## Design Tradoffs
-
-#### Pros
-
-- Client does not need to store or keep track of global information. Every client is allocated to a fixed storage node to communicate. This reduces traffics between clients and manager, which benefits a lot when there are a huge number of clients/storage nodes.
-- All storage nodes have copies of global information. Based on local information, every storage node can find *preference list* and know where to put data by itself, which reduces a lot of communication between storage nodes and managers.
-
-- Manager always keeps track of global information and notifies storage nodes when update is required. This helps keep state consistency among all storage nodes.
-
-#### Cons
-
-- 
+- We defined new classes and many functions, but we had to put them in *client.cpp* to avoid creating new source files.
 
 
 
 
-
-
-
-
-## Initial Implementation
-+ Every message establish a new socket
-+ Later improvement by event-driven model
-
-"13 clientid nodeid length\ngchsyhesgeyjrhnjyadbyuj"
 
 # References
+
+- DeCandia, Giuseppe, et al. "Dynamo: amazon's highly available key-value store." *ACM SIGOPS operating systems review*. Vol. 41. No. 6. ACM, 2007.
+
 + Stevens, W. Richard, and Stephen A. Rago. Advanced programming in the UNIX environment. Addison-Wesley, 2008.
-
-
-
-
-
-
-
-0 1 2 3 4 5 5 5 4 3 2 1 0
