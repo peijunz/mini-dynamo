@@ -6,6 +6,7 @@ void GTStoreManager::init() {
 	int size;
 	struct sockaddr_un un;
 	un.sun_family = AF_UNIX;
+    unlink(manager_addr);
 	strcpy(un.sun_path, manager_addr);
 	if ((managerfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
 		perror("socket failed");
@@ -223,6 +224,11 @@ int GTStoreManager::manage_node_request(Message &m, int fd){
 	return 0;
 }
 
+void GTStoreManager::leave(){
+	close(managerfd);
+	unlink(manager_addr);
+}
+
 void GTStoreManager::exec(){
 	int connfd;
 	while (1){
@@ -245,9 +251,26 @@ void GTStoreManager::exec(){
 	}
 }
 
+
+GTStoreManager manager;
+static void _sig_handler(int signo) {
+    if(signo == SIGINT || signo == SIGTERM) {
+		manager.leave();
+		exit(1);
+    }
+}
+
 int main(int argc, char **argv) {
 
-	GTStoreManager manager;
+    if(SIG_ERR == signal(SIGINT, _sig_handler)) {
+        fprintf(stderr, "Unable to catch SIGINT...exiting.\n");
+        exit(1);
+    }
+
+    if(SIG_ERR == signal(SIGTERM, _sig_handler)) {
+        fprintf(stderr, "Unable to catch SIGTERM...exiting.\n");
+        exit(1);
+    }
 	manager.init();
 	manager.exec();
 }

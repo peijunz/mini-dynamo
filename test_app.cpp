@@ -45,7 +45,6 @@ int create_storage_node(int i) {
 int main() {
     int manager_id, pid;
     if ((manager_id = Fork()) == 0) {
-        unlink(manager_addr);
         printf("========================\n");
         printf("=== Starting Manager with (N=%d, R=%d, W=%d, V=%d)\n",\
                 CONFIG_N, CONFIG_R, CONFIG_W, CONFIG_V);
@@ -93,7 +92,7 @@ int main() {
         kill(pid, SIGTERM);
         waitpid(pid, NULL, NULL);
         pid = create_storage_node(i+2*CONFIG_N);
-        usleep(3e5);
+        // usleep(3e5);
     }
 
     printf("======================== DEBUG 2================\n");
