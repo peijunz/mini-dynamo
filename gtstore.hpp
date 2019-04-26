@@ -226,6 +226,7 @@ public:
 	void print_ring();
 	void print_data();
 
+	void verify_data();
 	// Communication between nodes
 	bool process_forward_request(Message& msg);
 	bool process_forward_reply(Message& msg);

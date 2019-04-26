@@ -540,8 +540,8 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	printf ("\tadd a new storage node !  Node ID = %d, New Node ID = %d\n", id, m.node_id);
 
 	if (node_table.nodes.size() > CONFIG_N && (m.type & DONATE_MASK)){
-		// m.recv(fd);
-		// vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
+		m.recv(fd);
+		vector<pair<VirtualNodeID, VirtualNodeID>> intervals = m.get_intervals();
 
 		// assert (intervals.size()!=0);
 
@@ -555,8 +555,8 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		//m.send(bootfd, m.data);
 		vector<pair<string, Data>> kvlist;
 
-		// fprintf(stderr, "\t Before KV List: %ld  intervals: %ld\n", kvlist.size(), intervals.size());
-/*
+		fprintf(stderr, "\t Before KV List: %ld  intervals: %ld\n", kvlist.size(), intervals.size());
+
 		for (int i=0; i<(int)intervals.size(); i++){
 			// Extract kv list
 			auto it = data.upper_bound(intervals[i].first);
@@ -574,10 +574,9 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 				}
 			}
 			// fprintf(stderr, "00000000000000000000  Get kv list: size=%ld\n", kvlist.size());
-
-		
 		}	
-*/
+
+/*
 		for (auto& x : data) {
 			for (auto it = x.second.begin(); it != x.second.end(); ) {
 				auto pref_list = node_table.get_preference_list(it->first, CONFIG_N + 1);
@@ -589,7 +588,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 					}
 				}
 				bool me_last = pref_list.back().second == id;
-				if (in_new && me_last) {
+				if (me_last) {
 					kvlist.push_back(*it);
 					it = x.second.erase(it);
 				} else {
@@ -597,12 +596,12 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 				}
 			}
 		}
-
+*/
 
 		fprintf(stderr, "\t Finish KV List: %ld\n", kvlist.size());
 
-	print_ring();
-	print_data();
+		print_ring();
+		print_data();
 
 		// Send
 		m.type = MSG_DONATE_REQUEST;
@@ -614,6 +613,7 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 		// m.print("\t[[[  Donate  Data in interval  ]]] \n");
 		kvlist.clear();
 		close(bootfd);
+		verify_data();
 		// m.print("\t<<<  Donated  Interval  ]]] total: " + to_string(intervals.size()) + "\n");
 	}
 	
@@ -627,6 +627,26 @@ bool GTStoreStorage::process_manage_reply(Message& m, int fd) {
 	return true;
 }
 
+
+
+void GTStoreStorage::verify_data(){
+	for (auto& x : data) {
+		for (auto it = x.second.begin(); it != x.second.end(); it++) {
+			auto pref_list = node_table.get_preference_list(it->first, CONFIG_N);
+			bool valid = false;
+			for (auto& p : pref_list) {
+				if (p.second == id) {
+					valid = true;
+					break;
+				}
+			}
+			if (!valid){
+				printf("ERROR: Unshared data\n");
+				exit(1);
+			}
+		}
+	}
+}
 
 GTStoreStorage storage;
 
